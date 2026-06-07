@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ company_name }} - FinAgent-Lithium 财报分析</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- Input form (shown on index page only) -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+{% if not company_name %}
+<div class="container">
+  <div class="form-card">
+    <h1>🔬 FinAgent-Lithium</h1>
+    <p class="subtitle">锂电行业财报横向截面分析系统</p>
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    <form method="POST" action="/analyze">
+      <div class="form-row">
+        <label>公司名称 <input name="company_name" placeholder="宁德时代" required></label>
+        <label>股票代码 <input name="stock_code" placeholder="300750"></label>
+        <label>报告期 <input name="current_period" placeholder="2025年报"></label>
+      </div>
+      <label>主营业务（一行一个）
+        <textarea name="primary_business" rows="3" placeholder="动力电池系统&#10;储能系统&#10;电池材料"></textarea>
+      </label>
+      <label>财报数据 JSON
+        <textarea name="financial_data_json" rows="12" placeholder='{"营业收入": 400000000000, "营业成本": 300000000000, ...}'></textarea>
+      </label>
+      <button type="submit" class="btn-primary">开始分析</button>
+    </form>
+    <p class="hint">或访问 <a href="/demo">/demo</a> 查看宁德时代示例</p>
+  </div>
+</div>
+{% else %}
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- Report page -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="report-container">
+
+<!-- ── Header ── -->
+<header class="report-header">
+  <h1>{{ company_name }} <span class="stock-code">{{ stock_code }}</span></h1>
+  <div class="report-meta">{{ current_period }} | 数据完整度: {{ "%.0f"|format(data_completeness*100) }}%</div>
+  <div class="header-actions">
+    <button class="btn-download" onclick="downloadMarkdown()">⬇ 下载 Markdown 报告</button>
+  </div>
+</header>
+
+<!-- ── Chapter 1: Company portrait ── -->
+<section class="chapter" id="ch1-company">
+  <div class="company-card">
+    <div class="company-badge">
+      <span class="sector-tag">{{ sector_level1 or "未分类" }}</span>
+      {% if is_integrated %}<span class="tag-integrated">一体化企业</span>{% endif %}
+    </div>
+    <h2>{{ sector_level2 or sector_level1 }}</h2>
+    {% if sector_characteristics %}
+    <p class="company-desc">{{ sector_characteristics.split('\n')[0] }}</p>
+    {% endif %}
+  </div>
+</section>
+
+<!-- ── Integrated enterprise tab switcher ── -->
+{% if is_integrated and sector_tabs|length > 1 %}
+<section class="chapter" id="ch-integrated-tabs">
+  <div class="sub-sector-tabs">
+    {% for st in sector_tabs %}
+    <button class="sub-tab {% if loop.first %}active{% endif %}" onclick="switchSubSector({{ loop.index0 }})">
+      {{ st.label.split(' ', 2)[-1] if ' ' in st.label else st.label }}
+    </button>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- ── Chapter 2: General indicators dashboard ── -->
+<section class="chapter" id="ch2-general">
+  <h2 class="chapter-title">📊 体检报告：四大维度速览</h2>
+
+  <div class="indicator-grid">
+    {% for ind in general_computable %}
+    <div class="ind-card risk-{{ ind.risk_color }}">
+      <div class="ind-header">
+        <span class="ind-name">{{ ind.name }}</span>
+        <span class="ind-risk">{{ ind.risk_level }}</span>
+      </div>
+      <div class="ind-value">{{ ind.value or "—" }}</div>
+      <div class="ind-range">正常: {{ ind.normal_range }}</div>
+      <div class="ind-explanation">{{ ind.explanation[:80] }}{% if ind.explanation|length > 80 %}...{% endif %}</div>
+    </div>
+    {% endfor %}
+
+    {% for ind in general_pending %}
+    <div class="ind-card risk-pending">
+      <div class="ind-header">
+        <span class="ind-name">{{ ind.name }}</span>
+        <span class="ind-risk">{{ ind.risk_level }}</span>
+      </div>
+      <div class="ind-value muted">—</div>
+      <div class="ind-range">需要上期数据才能计算</div>
+      <div class="ind-explanation">{{ ind.explanation[:80] }}{% if ind.explanation|length > 80 %}...{% endif %}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ── Chapter 3: Sector indicators ── -->
+{% for st in sector_tabs %}
+<section class="chapter sector-panel" id="ch3-sector-{{ loop.index0 }}" {% if is_integrated and not loop.first %}style="display:none"{% endif %}>
+  <h2 class="chapter-title">🔍 {{ st.label }}</h2>
+
+  <div class="sector-tabs">
+    {% for tab in st.tabs %}
+    <div class="sector-tab-group">
+      <h3 class="tab-label">
+        {{ tab.name }}
+        {% for ind in tab.indicators %}
+          {% if ind.is_fatal %}<span class="badge-fatal">🔴生死</span>{% endif %}
+          {% if ind.is_key %}<span class="badge-key">⭐先行</span>{% endif %}
+        {% endfor %}
+      </h3>
+      <div class="sector-ind-list">
+        {% for ind in tab.indicators %}
+        <div class="sector-ind-item risk-{{ ind.risk_color }}">
+          <div class="si-header">
+            <span class="si-name">{{ ind.name }}</span>
+            <span class="si-risk">{{ ind.risk_level }}</span>
+            {% if ind.is_fatal %}<span class="badge-fatal">🔴生死指标</span>{% endif %}
+            {% if ind.is_key %}<span class="badge-key">⭐先行指标</span>{% endif %}
+          </div>
+          <div class="si-value">{{ ind.value or "数据缺失" }}</div>
+          {% if ind.value %}
+          <div class="si-range">正常区间: {{ ind.normal_range }}</div>
+          {% endif %}
+          <div class="si-explanation">{{ ind.explanation[:120] }}{% if ind.explanation|length > 120 %}...{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+
+<!-- ── Chapter 4: Linkage diagnosis ── -->
+<section class="chapter" id="ch4-linkage">
+  <h2 class="chapter-title">🔗 联动诊断：指标组合在一起看</h2>
+
+  {% if linkage_diagnosis %}
+  <div class="linkage-cards">
+    {% for d in linkage_diagnosis %}
+    <div class="linkage-card {% if '高危' in d.status %}linkage-danger{% elif '风险' in d.status or '衰退' in d.status %}linkage-warning{% else %}linkage-normal{% endif %}">
+      <div class="linkage-status">
+        {% if '高危' in d.status %}🔴{% elif '风险' in d.status or '衰退' in d.status %}🟡{% elif '最优' in d.status %}🟢{% else %}⚪{% endif %}
+        <strong>{{ d.status }}</strong>
+      </div>
+      <div class="linkage-combo">{{ d.combination }}</div>
+      <div class="linkage-desc">{{ d.description }}</div>
+      {% if d.investment_implication %}
+      <div class="linkage-implication">💡 {{ d.investment_implication }}</div>
+      {% endif %}
+      {% if d.evidence %}
+      <div class="linkage-evidence">
+        {% for k, v in d.evidence.items() %}
+        <span class="evidence-tag">{{ k }}: {{ v }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">暂无联动诊断数据</div>
+  {% endif %}
+</section>
+
+<!-- ── Chapter 5: Anomaly alerts ── -->
+<section class="chapter" id="ch5-anomaly">
+  <h2 class="chapter-title">⚠️ 异常警报</h2>
+
+  {% if has_anomalies %}
+  <div class="anomaly-list">
+    {% for sig in anomaly_signals %}
+    <div class="anomaly-card" style="--sev: {{ sig.severity }}">
+      <div class="anomaly-header">
+        <span class="anomaly-severity-bar">
+          {% for _ in range(sig.severity) %}🔴{% endfor %}
+        </span>
+        <strong>{{ sig.rule_id }}</strong>
+        <span class="sev-label">严重度 {{ sig.severity }}/5</span>
+      </div>
+      <div class="anomaly-body">
+        <div><strong>表现：</strong>{{ sig.description }}</div>
+        <div><strong>风险：</strong>{{ sig.potential_risk }}</div>
+        {% if sig.suggested_accounts %}
+        <div><strong>建议核查科目：</strong>{{ sig.suggested_accounts|join('、') }}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state success">✅ 暂未发现明显异常信号</div>
+  {% endif %}
+</section>
+
+<!-- ── Chapter 6: Summary ── -->
+<section class="chapter" id="ch6-summary">
+  <h2 class="chapter-title">📝 总结</h2>
+  <div class="summary-box">
+    {{ report_markdown.split('## 六、总结')[1].split('---')[0] | safe if '## 六、总结' in report_markdown else '' }}
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer class="report-footer">
+  {% if skipped_external > 0 %}
+  <p class="footer-warning">⚠️ 本报告暂未接入锂价、行业增速等外部市场数据，{{ skipped_external }} 条风险规则未启用。</p>
+  {% endif %}
+  <p class="footer-disclaimer">本分析仅基于财务报表数据，不构成投资建议。</p>
+</footer>
+
+<!-- ── Hidden report data for download ── -->
+<script id="report-markdown-data" type="text/markdown">{{ report_markdown | e }}</script>
+
+</div>
+{% endif %}
+
+<script>
+function downloadMarkdown() {
+  var md = document.getElementById('report-markdown-data').textContent;
+  // Decode HTML entities
+  var txt = document.createElement('textarea');
+  txt.innerHTML = md;
+  md = txt.value;
+
+  var blob = new Blob([md], {type: 'text/markdown;charset=utf-8'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '{{ company_name }}_analysis.md';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+{% if is_integrated %}
+function switchSubSector(idx) {
+  document.querySelectorAll('.sector-panel').forEach(function(el, i) {
+    el.style.display = (i === idx) ? '' : 'none';
+  });
+  document.querySelectorAll('.sub-tab').forEach(function(el, i) {
+    el.classList.toggle('active', i === idx);
+  });
+}
+{% endif %}
+</script>
+</body>
+</html>

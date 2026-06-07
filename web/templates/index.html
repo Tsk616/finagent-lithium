@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinAgent-Lithium</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- ── Loading overlay ── -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">正在分析中...</div>
+  <div class="loading-sub" id="loadingSub">首次使用可能需要 15-30 秒唤醒服务器，请耐心等待</div>
+  <div class="loading-steps">
+    <div class="loading-step" id="step1"><span class="step-dot"></span>识别行业赛道</div>
+    <div class="loading-step" id="step2"><span class="step-dot"></span>校验财务数据</div>
+    <div class="loading-step" id="step3"><span class="step-dot"></span>计算通用 + 赛道指标</div>
+    <div class="loading-step" id="step4"><span class="step-dot"></span>联动诊断与异常扫描</div>
+    <div class="loading-step" id="step5"><span class="step-dot"></span>生成分析报告</div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="form-card">
+    <h1>FinAgent-Lithium</h1>
+    <p class="subtitle">锂电行业财报横向截面分析系统</p>
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+    <form method="POST" action="/analyze" enctype="multipart/form-data" id="analysisForm" onsubmit="startLoading()">
+
+      <!-- ── File upload area ── -->
+      <div class="upload-area" id="dropZone">
+        <div class="upload-icon">&#128194;</div>
+        <div class="upload-text">
+          <strong>拖拽 Excel / PDF 文件到此处</strong><br>
+          <span class="hint">或点击选择文件。支持 .xlsx .xls .pdf 格式</span>
+        </div>
+        <input type="file" name="file" id="fileInput"
+               accept=".xlsx,.xls,.pdf"
+               style="display:none"
+               onchange="onFileSelected(this)">
+        <button type="button" class="btn-upload" onclick="document.getElementById('fileInput').click()">
+          选择文件
+        </button>
+        <div id="fileName" class="file-name"></div>
+      </div>
+
+      <div class="divider"><span>或手动输入数据</span></div>
+
+      <!-- ── Company info ── -->
+      <div class="form-row">
+        <label>公司名称 <input name="company_name" placeholder="宁德时代"></label>
+        <label>股票代码 <input name="stock_code" placeholder="300750"></label>
+        <label>报告期 <input name="current_period" placeholder="2025年报"></label>
+      </div>
+      <label>主营业务（一行一个）
+        <textarea name="primary_business" rows="2" placeholder="动力电池系统&#10;储能系统&#10;电池材料"></textarea>
+      </label>
+
+      <!-- ── JSON input (collapsible) ── -->
+      <details>
+        <summary>高级：手动输入 / 粘贴 JSON 数据</summary>
+        <label style="margin-top:8px">财报数据 JSON
+          <textarea name="financial_data_json" rows="8"
+            placeholder='{"营业收入": 400000000000, "营业成本": 300000000000, "净利润": 44000000000, ...}'></textarea>
+        </label>
+      </details>
+
+      <button type="submit" class="btn-primary" id="submitBtn">开始分析</button>
+    </form>
+
+    <div class="demo-section">
+      <p>快速体验：</p>
+      <a href="/demo" class="btn-demo">宁德时代 Demo</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── File upload handling ──
+var dropZone = document.getElementById('dropZone');
+var fileInput = document.getElementById('fileInput');
+var fileName = document.getElementById('fileName');
+
+// Click to select
+dropZone.addEventListener('click', function(e) {
+  if (e.target !== fileInput && e.target.tagName !== 'BUTTON') {
+    fileInput.click();
+  }
+});
+
+// Drag & drop
+dropZone.addEventListener('dragover', function(e) {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', function(e) {
+  dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', function(e) {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  var files = e.dataTransfer.files;
+  if (files.length > 0) {
+    fileInput.files = files;
+    onFileSelected(fileInput);
+  }
+});
+
+function onFileSelected(input) {
+  if (input.files && input.files[0]) {
+    var name = input.files[0].name;
+    fileName.textContent = '已选择: ' + name;
+    fileName.className = 'file-name active';
+    // Enable company name auto-fill from filename
+    var cnInput = document.querySelector('input[name="company_name"]');
+    if (!cnInput.value) {
+      var guess = name.replace(/\.(xlsx|xls|pdf)$/i, '')
+                      .replace(/[_\-\d]+$/, '')
+                      .replace(/财务报表|年报|审计/g, '');
+      cnInput.placeholder = '如: ' + guess;
+    }
+  }
+}
+
+// ── Loading overlay ──
+var stepNames = ['step1', 'step2', 'step3', 'step4', 'step5'];
+var stepInterval = null;
+
+function startLoading() {
+  var overlay = document.getElementById('loadingOverlay');
+  overlay.classList.add('active');
+
+  // Disable submit button
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '分析中...';
+
+  // Animate steps sequentially
+  var current = 0;
+  stepInterval = setInterval(function() {
+    if (current > 0) {
+      var prev = document.getElementById(stepNames[current - 1]);
+      prev.classList.remove('active');
+      prev.classList.add('done');
+    }
+    if (current < stepNames.length) {
+      var el = document.getElementById(stepNames[current]);
+      el.classList.add('active');
+    }
+    current++;
+    if (current > stepNames.length) {
+      clearInterval(stepInterval);
+      // All steps done, update message
+      var sub = document.getElementById('loadingSub');
+      sub.textContent = '报告即将生成，请稍候...';
+    }
+  }, 3000); // Advance every 3 seconds (matching ~15s total for cold start)
+}
+</script>
+</body>
+</html>

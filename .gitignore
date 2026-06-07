@@ -1,0 +1,43 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temp files
+*.tmp
+temp/
+
+# Test artifacts
+.pytest_cache/
+*.egg-info/
+
+# Claude Code
+.claude/
+
+# Source data (KB JSON is the compiled form)
+锂电行业财报分析指标（通用+特殊）(3).xlsx
+数据映射配置手册_关键词库+别名映射.docx
+转换脚本使用方法bash.txt
+
+# Prompts (dev docs, not needed at runtime)
+prompts/
+
+# Test report
+_test_report_ningde.md
