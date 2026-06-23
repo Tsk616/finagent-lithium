@@ -47,6 +47,26 @@ def test_wind_cli_disabled_by_default_in_tests():
     assert result is None
     assert run_mock.call_count == 0
     assert status["live_calls_enabled"] is False
+    assert status["daily_limit"] == 500
+
+
+def test_wind_status_reports_api_key_configured_without_exposing_secret():
+    """Wind status may report key presence, but must never expose the key."""
+    from nodes import wind_adapter
+
+    with tempfile.TemporaryDirectory() as tmp:
+        with patch.dict(
+            os.environ,
+            {
+                "WIND_CACHE_DIR": tmp,
+                "WIND_API_KEY": "test-secret-key",
+            },
+            clear=False,
+        ):
+            status = wind_adapter.get_wind_status()
+
+    assert status["api_key_configured"] is True
+    assert "test-secret-key" not in str(status)
 
 
 def test_wind_cli_uses_cache_before_subprocess():

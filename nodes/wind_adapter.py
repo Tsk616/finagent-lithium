@@ -38,6 +38,7 @@ _WIND_STATUS: Dict[str, Any] = {
     "skill_dir": None,
     "cache_dir": None,
     "live_calls_enabled": None,
+    "api_key_configured": False,
     "last_error": None,
     "last_cache_hit": False,
     "daily_limit": None,
@@ -391,8 +392,16 @@ def _write_wind_cache(
 
 
 def _wind_live_calls_enabled() -> bool:
-    """Allow live Wind calls only when explicitly requested."""
-    enabled = os.environ.get("WIND_LIVE_TEST") == "1" or os.environ.get("WIND_ENABLE_LIVE") == "1"
+    """Allow live Wind calls when explicitly enabled or a Wind key is configured."""
+    live_flag = os.environ.get("WIND_ENABLE_LIVE", "").strip().lower()
+    if live_flag in {"0", "false", "no", "off"}:
+        enabled = False
+    else:
+        enabled = (
+            os.environ.get("WIND_LIVE_TEST") == "1"
+            or live_flag == "1"
+            or bool(os.environ.get("WIND_API_KEY"))
+        )
     _WIND_STATUS["live_calls_enabled"] = enabled
     return enabled
 
@@ -417,9 +426,9 @@ def _read_wind_usage() -> Dict[str, Any]:
 
 def _wind_daily_limit() -> int:
     try:
-        return max(int(os.environ.get("WIND_DAILY_POINT_LIMIT", "200")), 0)
+        return max(int(os.environ.get("WIND_DAILY_POINT_LIMIT", "500")), 0)
     except ValueError:
-        return 200
+        return 500
 
 
 def _wind_call_cost() -> int:
@@ -462,10 +471,20 @@ def get_wind_status() -> Dict[str, Any]:
         "skill_dir": skill_dir,
         "cache_dir": str(_wind_cache_dir()),
         "live_calls_enabled": _wind_live_calls_enabled(),
+        "api_key_configured": bool(os.environ.get("WIND_API_KEY")),
         "daily_limit": _wind_daily_limit(),
         "daily_used": usage.get("used", 0),
     })
     return dict(_WIND_STATUS)
+
+
+def _wind_subprocess_env() -> Dict[str, str]:
+    """Build a child process env without exposing secrets in logs or state."""
+    env = os.environ.copy()
+    api_key = os.environ.get("WIND_API_KEY")
+    if api_key:
+        env["WIND_API_KEY"] = api_key
+    return env
 
 
 def _check_node_available() -> bool:
@@ -529,6 +548,7 @@ def _call_wind_cli(
         result = subprocess.run(
             [*_WIND_CLI, "call", server_type, tool_name, params_json],
             cwd=skill_dir,
+            env=_wind_subprocess_env(),
             capture_output=True,
             text=True,
             encoding="utf-8",

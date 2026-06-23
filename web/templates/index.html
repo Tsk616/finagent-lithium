@@ -38,7 +38,7 @@
     </nav>
     <div class="sidebar-note">
       <strong>当前模式</strong>
-      <span>Wind 默认不实时调用；如需启用，请在部署环境显式配置。</span>
+      <span>Wind API 已支持环境变量接入，额度默认 500 积分/日；未配置或额度用尽时自动降级。</span>
     </div>
   </aside>
 
@@ -142,7 +142,7 @@
             <span class="eyebrow">Benchmark</span>
             <h3>行业对标准备</h3>
           </div>
-          <p class="muted-copy">当前版本会优先使用 Wind、缓存或已上传同行财务数据。公网默认关闭实时 Wind 调用，避免无意消耗积分。</p>
+          <p class="muted-copy">当前版本会优先使用 Wind、缓存或已上传同行财务数据。Wind 调用会先查缓存，并受每日 500 积分额度保护。</p>
           <div class="mini-metrics">
             <span>同行均值</span>
             <span>行业位置</span>
