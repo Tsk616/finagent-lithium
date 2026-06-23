@@ -101,6 +101,30 @@ def test_wind_cli_uses_cache_before_subprocess():
     assert run_mock.call_count == 0
 
 
+def test_wind_only_financials_do_not_fallback_to_akshare():
+    """Wind failures should return missing data instead of spending time on other APIs."""
+    from nodes import wind_adapter
+
+    with patch.object(wind_adapter, "_wind_fetch_financials", return_value=None):
+        with patch.object(wind_adapter, "_ak_fetch_financials") as ak_fetch:
+            result = wind_adapter.fetch_financials("002594.SZ", period="2025年报", timeout=1)
+
+    assert result is None
+    assert ak_fetch.call_count == 0
+
+
+def test_wind_only_macro_context_does_not_fallback_to_akshare():
+    """Macro context should expose missing data instead of using non-Wind sources."""
+    from nodes import wind_adapter
+
+    with patch.object(wind_adapter, "_wind_fetch_macro_context", return_value=None):
+        with patch.object(wind_adapter, "_ak_fetch_macro_context") as ak_fetch:
+            result = wind_adapter.fetch_macro_context(timeout=1)
+
+    assert result is None
+    assert ak_fetch.call_count == 0
+
+
 def test_structured_interpretations_do_not_invent_missing_data():
     """Interpretations should be evidence-backed and explicit about missing data."""
     from nodes.interpretation import build_structured_interpretations
@@ -217,6 +241,8 @@ if __name__ == "__main__":
     test_wind_skill_dir_prefers_env_path()
     test_wind_cli_disabled_by_default_in_tests()
     test_wind_cli_uses_cache_before_subprocess()
+    test_wind_only_financials_do_not_fallback_to_akshare()
+    test_wind_only_macro_context_does_not_fallback_to_akshare()
     test_structured_interpretations_do_not_invent_missing_data()
     test_template_data_exposes_grouped_metric_settings_and_insights()
     test_pipeline_exposes_interpretation_state_without_live_wind()

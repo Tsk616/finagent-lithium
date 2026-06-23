@@ -201,6 +201,7 @@ function onFileSelected(input) {
 
 var stepNames = ['step1', 'step2', 'step3', 'step4', 'step5'];
 var stepInterval = null;
+var loadingTimeout = null;
 
 function startLoading() {
   var overlay = document.getElementById('loadingOverlay');
@@ -208,6 +209,15 @@ function startLoading() {
   var btn = document.getElementById('submitBtn');
   btn.disabled = true;
   btn.textContent = '分析中';
+  if (loadingTimeout) {
+    clearTimeout(loadingTimeout);
+  }
+  loadingTimeout = setTimeout(function() {
+    var sub = document.getElementById('loadingSub');
+    if (sub) {
+      sub.textContent = 'Wind 数据请求耗时较长；若数据不可用，系统会生成含缺数据说明的报告，不会静默消耗额度。';
+    }
+  }, 45000);
 
   var current = 0;
   stepInterval = setInterval(function() {

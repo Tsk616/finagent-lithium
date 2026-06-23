@@ -1003,8 +1003,8 @@ def _wind_fetch_financials(
     """Fetch financials via Wind MCP. Returns canonical account dict or None on failure."""
     question = _build_fundamentals_question(windcode, period)
 
-    # Try up to 2 times (for NETWORK_ERROR retry)
-    for attempt in range(2):
+    # Try once; page requests should return a report instead of spending quota on retries.
+    for attempt in range(1):
         if attempt > 0:
             time.sleep(2)
         mcp_result = _call_wind_cli(
@@ -1042,7 +1042,7 @@ def _wind_fetch_company_info(
     """Fetch company info via Wind MCP."""
     question = f"{windcode}公司基本档案主营行业上市日期所属板块"
 
-    for attempt in range(2):
+    for attempt in range(1):
         if attempt > 0:
             time.sleep(2)
         mcp_result = _call_wind_cli(
@@ -1066,7 +1066,7 @@ def _wind_fetch_company_info(
 
 def _wind_search_lithium_peers(timeout: int = 60) -> Optional[List[str]]:
     """Search lithium battery peers via Wind MCP."""
-    for attempt in range(2):
+    for attempt in range(1):
         if attempt > 0:
             time.sleep(2)
         mcp_result = _call_wind_cli(
@@ -1091,22 +1091,17 @@ def _wind_search_lithium_peers(timeout: int = 60) -> Optional[List[str]]:
 
 def _wind_fetch_macro_context(timeout: int = 60) -> Optional[Dict[str, Any]]:
     """Fetch macro/lithium price data via Wind MCP economic_data."""
-    for attempt in range(2):
-        if attempt > 0:
-            time.sleep(2)
-        mcp_result = _call_wind_cli(
-            "economic_data", "get_economic_data",
-            {"metricIdsStr": "碳酸锂价格", "freq": "3"},  # weekly
-            timeout=timeout,
-        )
-        if mcp_result is None:
-            continue
+    mcp_result = _call_wind_cli(
+        "economic_data",
+        "get_economic_data",
+        {"metricIdsStr": "\u78b3\u9178\u9502\u4ef7\u683c", "freq": "周"},
+        timeout=timeout,
+    )
+    if mcp_result is None:
+        return None
 
-        parsed = _parse_wind_economic_data(mcp_result)
-        if parsed:
-            return parsed
-
-    return None
+    parsed = _parse_wind_economic_data(mcp_result)
+    return parsed if parsed else None
 
 
 # ── AKShare implementations (private, renamed from originals) ───────────────
@@ -1554,7 +1549,7 @@ def _ak_fetch_macro_context(timeout: int = 30) -> Optional[Dict[str, Any]]:
 def fetch_financials(
     windcode: str,
     period: str = "最新一期",
-    timeout: int = 30,
+    timeout: int = 6,
 ) -> Optional[Dict[str, Optional[float]]]:
     """Fetch key financial accounts for a given stock.
 
@@ -1571,21 +1566,19 @@ def fetch_financials(
     """
     # Phase 1: Wind MCP (primary)
     try:
-        result = _wind_fetch_financials(windcode, period, timeout=min(timeout * 4, 120))
+        result = _wind_fetch_financials(windcode, period, timeout=min(timeout, 8))
         if result and len(result) >= 3:
             logger.info("Wind MCP: %d accounts for %s (%s)", len(result), windcode, period)
-            _ak_extract_prior_period(result, windcode, _period_to_date(period))
-            _ak_supplement_ths(result, windcode, _period_to_date(period))
             return result
     except Exception as e:
         logger.warning("Wind MCP fetch_financials exception: %s", e)
 
     # Phase 2: AKShare (fallback)
-    logger.info("Falling back to AKShare for fetch_financials(%s, %s)", windcode, period)
-    return _ak_fetch_financials(windcode, period, timeout)
+    logger.info("Wind-only fetch_financials returned no data for %s (%s)", windcode, period)
+    return None
 
 
-def fetch_company_info(windcode: str, timeout: int = 30) -> Optional[Dict[str, Any]]:
+def fetch_company_info(windcode: str, timeout: int = 6) -> Optional[Dict[str, Any]]:
     """Fetch company basic info.
 
     Primary: Wind MCP → AKShare fallback.
@@ -1595,18 +1588,18 @@ def fetch_company_info(windcode: str, timeout: int = 30) -> Optional[Dict[str, A
         or None on failure.
     """
     try:
-        result = _wind_fetch_company_info(windcode, timeout=min(timeout * 2, 60))
+        result = _wind_fetch_company_info(windcode, timeout=min(timeout, 6))
         if result and result.get("name"):
             logger.info("Wind MCP: company info for %s → %s", windcode, result.get("name"))
             return result
     except Exception as e:
         logger.warning("Wind MCP fetch_company_info exception: %s", e)
 
-    logger.info("Falling back to AKShare for fetch_company_info(%s)", windcode)
-    return _ak_fetch_company_info(windcode, timeout)
+    logger.info("Wind-only fetch_company_info returned no data for %s", windcode)
+    return None
 
 
-def fetch_company_info_enhanced(windcode: str, timeout: int = 30) -> Optional[Dict[str, Any]]:
+def fetch_company_info_enhanced(windcode: str, timeout: int = 6) -> Optional[Dict[str, Any]]:
     """Fetch enhanced company info for sector classification.
 
     Returns:
@@ -1633,7 +1626,7 @@ def extract_business_keywords(info: Optional[Dict[str, Any]]) -> List[str]:
     return keywords
 
 
-def search_lithium_peers(timeout: int = 30) -> Optional[List[str]]:
+def search_lithium_peers(timeout: int = 6) -> Optional[List[str]]:
     """Search for lithium battery industry peer stocks.
 
     Primary: Wind MCP → AKShare concept board → hardcoded fallback.
@@ -1643,7 +1636,7 @@ def search_lithium_peers(timeout: int = 30) -> Optional[List[str]]:
     """
     # Phase 1: Wind MCP
     try:
-        result = _wind_search_lithium_peers(timeout=min(timeout * 2, 60))
+        result = _wind_search_lithium_peers(timeout=min(timeout, 6))
         if result and len(result) >= 5:
             logger.info("Wind MCP: %d lithium peers found", len(result))
             return result
@@ -1651,14 +1644,14 @@ def search_lithium_peers(timeout: int = 30) -> Optional[List[str]]:
         logger.warning("Wind MCP search_lithium_peers exception: %s", e)
 
     # Phase 2: AKShare (with built-in hardcoded fallback)
-    logger.info("Falling back to AKShare for search_lithium_peers()")
-    return _ak_search_lithium_peers(timeout)
+    logger.info("Wind-only search_lithium_peers returned no data")
+    return None
 
 
 def fetch_peers_financials(
     windcodes: Optional[List[str]] = None,
-    max_peers: int = 8,
-    timeout: int = 45,
+    max_peers: int = 3,
+    timeout: int = 6,
 ) -> Optional[List[Dict[str, Any]]]:
     """Fetch key financials for lithium battery peer companies.
 
@@ -1676,7 +1669,7 @@ def fetch_peers_financials(
 
     peers = []
     for wc in windcodes:
-        fin = fetch_financials(wc, period="最新一期")
+        fin = fetch_financials(wc, period="最新一期", timeout=timeout)
         if fin:
             peers.append({
                 "windcode": wc,
@@ -1692,7 +1685,7 @@ def fetch_peers_financials(
     return peers if peers else None
 
 
-def fetch_macro_context(timeout: int = 30) -> Optional[Dict[str, Any]]:
+def fetch_macro_context(timeout: int = 6) -> Optional[Dict[str, Any]]:
     """Fetch lithium carbonate futures/market data as macro context.
 
     Primary: Wind MCP → AKShare fallback.
@@ -1701,7 +1694,7 @@ def fetch_macro_context(timeout: int = 30) -> Optional[Dict[str, Any]]:
         Dict with "碳酸锂期货" key containing dates, values, unit.
     """
     try:
-        result = _wind_fetch_macro_context(timeout=min(timeout * 2, 60))
+        result = _wind_fetch_macro_context(timeout=min(timeout, 6))
         if result:
             # Validate: need enough data points
             for ind in result.values():
@@ -1711,13 +1704,13 @@ def fetch_macro_context(timeout: int = 30) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.warning("Wind MCP fetch_macro_context exception: %s", e)
 
-    logger.info("Falling back to AKShare for fetch_macro_context()")
-    return _ak_fetch_macro_context(timeout)
+    logger.info("Wind-only fetch_macro_context returned no data")
+    return None
 
 
 def get_lithium_price_trend(
     macro_data: Optional[Dict[str, Any]] = None,
-    timeout: int = 30,
+    timeout: int = 6,
 ) -> Optional[Dict[str, Any]]:
     """Extract lithium carbonate price trend from macro/futures data.
 

@@ -5,6 +5,7 @@ Orchestrates all 8 workflow nodes in sequence.
 Returns a complete AnalysisState dict ready for frontend rendering.
 """
 
+import os
 import sys
 from pathlib import Path
 from typing import Dict, Optional, List, Any
@@ -72,7 +73,7 @@ def run_pipeline(
     # ── Wind-enhanced sector classification ──
     # If stock_code is provided but no primary_business, try Wind for keywords.
     _wind_classified = False
-    if stock_code and not primary_business:
+    if stock_code and not primary_business and not company_name:
         try:
             from nodes.wind_adapter import (
                 stock_code_to_windcode,
@@ -80,7 +81,7 @@ def run_pipeline(
                 extract_business_keywords,
             )
             windcode = stock_code_to_windcode(stock_code)
-            wind_info = fetch_company_info_enhanced(windcode)
+            wind_info = fetch_company_info_enhanced(windcode, timeout=6)
             if wind_info:
                 # Use Wind company name if user didn't provide one
                 if not company_name:
@@ -168,15 +169,18 @@ def run_pipeline(
             get_lithium_price_trend, fetch_peers_financials, get_wind_status, stock_code_to_windcode,
         )
         state["wind_status"] = get_wind_status()
-        if state["wind_status"].get("live_calls_enabled", True):
+        if (
+            state["wind_status"].get("live_calls_enabled", True)
+            and os.environ.get("WIND_ENABLE_CONTEXT") == "1"
+        ):
             # Lithium price trend for anomaly external rules
-            lithium_trend = get_lithium_price_trend(timeout=20)
+            lithium_trend = get_lithium_price_trend(timeout=6)
             if lithium_trend:
                 state["_lithium_trend"] = lithium_trend
                 state["macro_context"] = {"lithium_trend": lithium_trend}
 
             # Peer financials for cross-section comparison
-            peers = fetch_peers_financials(max_peers=8, timeout=60)
+            peers = fetch_peers_financials(max_peers=3, timeout=8)
             if peers:
                 # Tag the current company
                 current_wc = stock_code_to_windcode(stock_code) if stock_code else ""
