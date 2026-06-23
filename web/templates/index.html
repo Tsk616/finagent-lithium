@@ -6,107 +6,179 @@
 <title>FinAgent-Lithium</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="workbench-body">
 
-<!-- ── Loading overlay ── -->
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
-  <div class="loading-text">正在分析中...</div>
-  <div class="loading-sub" id="loadingSub">首次使用可能需要 15-30 秒唤醒服务器，请耐心等待</div>
+  <div class="loading-text">正在生成分析报告</div>
+  <div class="loading-sub" id="loadingSub">系统正在识别行业赛道、校验财务数据并生成指标解读。</div>
   <div class="loading-steps">
-    <div class="loading-step" id="step1"><span class="step-dot"></span>识别行业赛道</div>
-    <div class="loading-step" id="step2"><span class="step-dot"></span>校验财务数据</div>
-    <div class="loading-step" id="step3"><span class="step-dot"></span>计算通用 + 赛道指标</div>
-    <div class="loading-step" id="step4"><span class="step-dot"></span>联动诊断与异常扫描</div>
-    <div class="loading-step" id="step5"><span class="step-dot"></span>生成分析报告</div>
+    <div class="loading-step" id="step1"><span class="step-dot"></span>识别公司与行业赛道</div>
+    <div class="loading-step" id="step2"><span class="step-dot"></span>校验上传或手动录入的数据</div>
+    <div class="loading-step" id="step3"><span class="step-dot"></span>计算通用指标与锂电指标</div>
+    <div class="loading-step" id="step4"><span class="step-dot"></span>执行异常扫描与行业对标</div>
+    <div class="loading-step" id="step5"><span class="step-dot"></span>生成综合评分和报告页面</div>
   </div>
 </div>
 
-<div class="container">
-  <div class="form-card">
-    <h1>FinAgent-Lithium</h1>
-    <p class="subtitle">锂电行业财报横向截面分析系统</p>
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <div class="app-brand">
+      <div class="brand-mark">FA</div>
+      <div>
+        <h1>FinAgent</h1>
+        <p>锂电财报分析工作台</p>
+      </div>
+    </div>
+    <nav class="app-nav" aria-label="功能导航">
+      <a class="active" href="#analysis-panel">财报分析</a>
+      <a href="#data-guide">数据说明</a>
+      <a href="#benchmark-panel">行业对标</a>
+      <a href="#workflow-panel">分析流程</a>
+    </nav>
+    <div class="sidebar-note">
+      <strong>当前模式</strong>
+      <span>Wind 默认不实时调用；如需启用，请在部署环境显式配置。</span>
+    </div>
+  </aside>
+
+  <main class="app-main">
+    <header class="app-topbar">
+      <div>
+        <span class="eyebrow">Multi-Agent Financial Analysis</span>
+        <h2>把财报文件转成可解释的指标、风险和对标结论</h2>
+      </div>
+      <div class="status-pills" aria-label="系统状态">
+        <span>Flask</span>
+        <span>DeepSeek fallback</span>
+        <span>Vercel ready</span>
+      </div>
+    </header>
+
     {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
-    <form method="POST" action="/analyze" enctype="multipart/form-data" id="analysisForm" onsubmit="startLoading()">
-
-      <!-- ── File upload area ── -->
-      <div class="upload-area" id="dropZone">
-        <div class="upload-icon">&#128194;</div>
-        <div class="upload-text">
-          <strong>拖拽 Excel / PDF 文件到此处</strong><br>
-          <span class="hint">或点击选择文件。支持 .xlsx .xls .pdf 格式</span>
+    <section class="workspace-grid" id="analysis-panel">
+      <form method="POST" action="/analyze" enctype="multipart/form-data" id="analysisForm" class="analysis-card" onsubmit="startLoading()">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Step 1</span>
+            <h3>上传财报或录入核心数据</h3>
+          </div>
+          <a class="text-link" href="/demo">查看宁德时代 Demo</a>
         </div>
-        <input type="file" name="file" id="fileInput"
-               accept=".xlsx,.xls,.pdf"
-               style="display:none"
-               onchange="onFileSelected(this)">
-        <button type="button" class="btn-upload" onclick="document.getElementById('fileInput').click()">
-          选择文件
-        </button>
-        <div id="fileName" class="file-name"></div>
-      </div>
 
-      <div class="divider"><span>或手动输入数据</span></div>
+        <div class="upload-area" id="dropZone">
+          <div class="upload-icon">PDF / XLSX</div>
+          <div class="upload-text">
+            <strong>拖拽 Excel 或 PDF 文件到这里</strong>
+            <span class="hint">支持 .xlsx、.xls、.pdf。文件仅用于本次分析，解析后会删除临时文件。</span>
+          </div>
+          <input type="file" name="file" id="fileInput" accept=".xlsx,.xls,.pdf" onchange="onFileSelected(this)">
+          <button type="button" class="btn-upload" onclick="document.getElementById('fileInput').click()">选择文件</button>
+          <div id="fileName" class="file-name"></div>
+        </div>
 
-      <!-- ── Company info ── -->
-      <div class="form-row">
-        <label>公司名称 <input name="company_name" placeholder="宁德时代"></label>
-        <label>股票代码 <input name="stock_code" placeholder="300750"></label>
-        <label>报告期 <input name="current_period" placeholder="2025年报"></label>
-      </div>
-      <label>主营业务（一行一个）
-        <textarea name="primary_business" rows="2" placeholder="动力电池系统&#10;储能系统&#10;电池材料"></textarea>
-      </label>
+        <div class="divider"><span>或手动补充分析条件</span></div>
 
-      <!-- ── JSON input (collapsible) ── -->
-      <details>
-        <summary>高级：手动输入 / 粘贴 JSON 数据</summary>
-        <label style="margin-top:8px">财报数据 JSON
-          <textarea name="financial_data_json" rows="8"
-            placeholder='{"营业收入": 400000000000, "营业成本": 300000000000, "净利润": 44000000000, ...}'></textarea>
+        <div class="form-row">
+          <label>公司名称 <input name="company_name" placeholder="宁德时代"></label>
+          <label>股票代码 <input name="stock_code" placeholder="300750"></label>
+          <label>报告期 <input name="current_period" placeholder="2025 年报"></label>
+        </div>
+        <label>主营业务（一行一个）
+          <textarea name="primary_business" rows="3" placeholder="动力电池系统&#10;储能系统&#10;电池材料"></textarea>
         </label>
-      </details>
 
-      <button type="submit" class="btn-primary" id="submitBtn">开始分析</button>
-    </form>
+        <details class="input-details">
+          <summary>高级：粘贴财报 JSON 数据</summary>
+          <label>财报数据 JSON
+            <textarea name="financial_data_json" rows="8" placeholder='{"营业收入": 400000000000, "营业成本": 300000000000, "净利润": 44000000000}'></textarea>
+          </label>
+        </details>
 
-    <div class="demo-section">
-      <p>快速体验：</p>
-      <a href="/demo" class="btn-demo">宁德时代 Demo</a>
-    </div>
-  </div>
+        <button type="submit" class="btn-primary" id="submitBtn">开始分析</button>
+      </form>
+
+      <aside class="context-panel">
+        <section class="side-card" id="workflow-panel">
+          <div class="section-heading compact">
+            <span class="eyebrow">Pipeline</span>
+            <h3>7 步分析链路</h3>
+          </div>
+          <ol class="workflow-list">
+            <li>解析上传文件或 JSON 输入</li>
+            <li>识别锂电产业链赛道</li>
+            <li>计算通用财务指标</li>
+            <li>计算分行业指标和权重评分</li>
+            <li>扫描异常与联动风险</li>
+            <li>生成宏观背景与行业对标</li>
+            <li>输出可下载报告</li>
+          </ol>
+        </section>
+
+        <section class="side-card" id="data-guide">
+          <div class="section-heading compact">
+            <span class="eyebrow">Data</span>
+            <h3>数据说明</h3>
+          </div>
+          <div class="guide-list">
+            <div>
+              <strong>推荐格式</strong>
+              <span>优先上传 Excel，字段识别更稳定；PDF 适合文本型年报。</span>
+            </div>
+            <div>
+              <strong>缺失指标</strong>
+              <span>缺失项会显示为空状态，综合评分按可用权重归一化。</span>
+            </div>
+            <div>
+              <strong>行业数据</strong>
+              <span>没有 Wind、缓存或同行数据时，不生成伪造对标结论。</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="side-card" id="benchmark-panel">
+          <div class="section-heading compact">
+            <span class="eyebrow">Benchmark</span>
+            <h3>行业对标准备</h3>
+          </div>
+          <p class="muted-copy">当前版本会优先使用 Wind、缓存或已上传同行财务数据。公网默认关闭实时 Wind 调用，避免无意消耗积分。</p>
+          <div class="mini-metrics">
+            <span>同行均值</span>
+            <span>行业位置</span>
+            <span>高低判断</span>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </main>
 </div>
 
 <script>
-// ── File upload handling ──
 var dropZone = document.getElementById('dropZone');
 var fileInput = document.getElementById('fileInput');
 var fileName = document.getElementById('fileName');
 
-// Click to select
 dropZone.addEventListener('click', function(e) {
   if (e.target !== fileInput && e.target.tagName !== 'BUTTON') {
     fileInput.click();
   }
 });
 
-// Drag & drop
 dropZone.addEventListener('dragover', function(e) {
   e.preventDefault();
   dropZone.classList.add('dragover');
 });
 
-dropZone.addEventListener('dragleave', function(e) {
+dropZone.addEventListener('dragleave', function() {
   dropZone.classList.remove('dragover');
 });
 
 dropZone.addEventListener('drop', function(e) {
   e.preventDefault();
   dropZone.classList.remove('dragover');
-  var files = e.dataTransfer.files;
-  if (files.length > 0) {
-    fileInput.files = files;
+  if (e.dataTransfer.files.length > 0) {
+    fileInput.files = e.dataTransfer.files;
     onFileSelected(fileInput);
   }
 });
@@ -114,33 +186,29 @@ dropZone.addEventListener('drop', function(e) {
 function onFileSelected(input) {
   if (input.files && input.files[0]) {
     var name = input.files[0].name;
-    fileName.textContent = '已选择: ' + name;
+    fileName.textContent = '已选择：' + name;
     fileName.className = 'file-name active';
-    // Enable company name auto-fill from filename
-    var cnInput = document.querySelector('input[name="company_name"]');
-    if (!cnInput.value) {
+    dropZone.classList.add('has-file');
+    var companyInput = document.querySelector('input[name="company_name"]');
+    if (!companyInput.value) {
       var guess = name.replace(/\.(xlsx|xls|pdf)$/i, '')
-                      .replace(/[_\-\d]+$/, '')
-                      .replace(/财务报表|年报|审计/g, '');
-      cnInput.placeholder = '如: ' + guess;
+                      .replace(/[_\-\d]+$/g, '')
+                      .replace(/财务报表|年报|审计|年度报告/g, '');
+      companyInput.placeholder = guess || '宁德时代';
     }
   }
 }
 
-// ── Loading overlay ──
 var stepNames = ['step1', 'step2', 'step3', 'step4', 'step5'];
 var stepInterval = null;
 
 function startLoading() {
   var overlay = document.getElementById('loadingOverlay');
   overlay.classList.add('active');
-
-  // Disable submit button
   var btn = document.getElementById('submitBtn');
   btn.disabled = true;
-  btn.textContent = '分析中...';
+  btn.textContent = '分析中';
 
-  // Animate steps sequentially
   var current = 0;
   stepInterval = setInterval(function() {
     if (current > 0) {
@@ -149,17 +217,14 @@ function startLoading() {
       prev.classList.add('done');
     }
     if (current < stepNames.length) {
-      var el = document.getElementById(stepNames[current]);
-      el.classList.add('active');
+      document.getElementById(stepNames[current]).classList.add('active');
     }
     current++;
     if (current > stepNames.length) {
       clearInterval(stepInterval);
-      // All steps done, update message
-      var sub = document.getElementById('loadingSub');
-      sub.textContent = '报告即将生成，请稍候...';
+      document.getElementById('loadingSub').textContent = '报告即将生成，请稍候。';
     }
-  }, 3000); // Advance every 3 seconds (matching ~15s total for cold start)
+  }, 2500);
 }
 </script>
 </body>
