@@ -47,6 +47,11 @@
     <button class="btn-download" onclick="downloadMarkdown()">⬇ 下载 Markdown 报告</button>
   </div>
 </header>
+	{% if wind_enriched %}
+	<div style="text-align:center;padding:8px 16px;margin-bottom:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text-muted);">
+	  📊 财报数据由万得 Wind 金融数据服务提供（{{ wind_accounts_count }} 个科目）
+	</div>
+	{% endif %}
 
 <!-- ── Chapter 1: Company portrait ── -->
 <section class="chapter" id="ch1-company">
@@ -79,6 +84,48 @@
 <section class="chapter" id="ch2-general">
   <h2 class="chapter-title">📊 体检报告：四大维度速览</h2>
 
+  {% if weighted_score and weighted_score.score is not none %}
+  <div class="company-card" style="margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">综合评分</div>
+        <div style="font-size:32px;font-weight:700;color:var(--accent);">{{ weighted_score.score }}<span style="font-size:14px;color:var(--text-muted);"> / 100</span></div>
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;">
+        <div>可用权重：{{ weighted_score.available_weight }}%</div>
+        <div>跳过缺失权重：{{ weighted_score.skipped_weight }}%</div>
+        <div>方法：按业务权重归一化评分</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if metric_settings_groups %}
+  <details class="metric-settings">
+    <summary>指标设置与数据说明</summary>
+    <div class="metric-settings-body">
+      {% for group in metric_settings_groups %}
+      <div class="metric-settings-group">
+        <h3>{{ group.name }}</h3>
+        <div class="metric-settings-list">
+          {% for ind in group.indicators %}
+          <div class="metric-setting-row">
+            <div>
+              <strong>{{ ind.display_name or ind.name }}</strong>
+              <span>{{ ind.canonical_name }}</span>
+            </div>
+            <div>权重：{{ ind.weight if ind.weight is not none else "未配置" }}</div>
+            <div>正常：{{ ind.normal_range or "暂无" }}</div>
+            <div class="metric-setting-desc">{{ ind.explanation or ind.formula or "暂无说明" }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+
   <div class="indicator-grid">
     {% for ind in general_computable %}
     <div class="ind-card risk-{{ ind.risk_color }}">
@@ -104,6 +151,21 @@
     </div>
     {% endfor %}
   </div>
+
+  {% if metric_interpretations %}
+  <div class="insight-panel">
+    <h3>AI 指标解读</h3>
+    <div class="insight-list">
+      {% for item in metric_interpretations[:6] %}
+      <div class="insight-item">
+        <strong>{{ item.metric }}</strong>
+        <span class="insight-status">{{ item.status }}</span>
+        <p>{{ item.interpretation }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 </section>
 
 <!-- ── Chapter 3: Sector indicators ── -->
@@ -206,21 +268,145 @@
   {% endif %}
 </section>
 
-<!-- ── Chapter 6: Summary ── -->
-<section class="chapter" id="ch6-summary">
-  <h2 class="chapter-title">📝 总结</h2>
-  <div class="summary-box">
-    {{ report_markdown.split('## 六、总结')[1].split('---')[0] | safe if '## 六、总结' in report_markdown else '' }}
-  </div>
-</section>
-
-<!-- ── Footer ── -->
-<footer class="report-footer">
-  {% if skipped_external > 0 %}
-  <p class="footer-warning">⚠️ 本报告暂未接入锂价、行业增速等外部市场数据，{{ skipped_external }} 条风险规则未启用。</p>
+  <!-- Macro context -->
+  {% if lithium_trend or macro_insights %}
+  <section class="chapter" id="ch5b-macro">
+    <h2 class="chapter-title">🌍 宏观背景</h2>
+    {% if macro_insights %}
+    <div class="insight-panel">
+      <h3>宏观背景解读</h3>
+      <p>{{ macro_insights.summary }}</p>
+      {% if macro_insights.points %}
+      <ul>
+        {% for point in macro_insights.points %}
+        <li>{{ point }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if lithium_trend %}
+    <div class="company-card" style="margin-bottom:12px;">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;">
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">碳酸锂期货价格（最新）</div>
+          <div style="font-size:28px;font-weight:700;">
+            {{ "%.0f"|format(lithium_trend.current) }} <span style="font-size:14px;">{{ lithium_trend.unit }}</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">近3月变化</div>
+          <div style="font-size:20px;font-weight:600;">
+            {{ "%+.1f"|format(lithium_trend.change_3m_pct) }}%
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">趋势</div>
+          <div style="font-size:20px;font-weight:600;">{{ lithium_trend.trend }}</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">
+        3月均价 {{ "%.0f"|format(lithium_trend.avg_3m) }} | 6月均价 {{ "%.0f"|format(lithium_trend.avg_6m) }} {{ lithium_trend.unit }}
+      </div>
+    </div>
+    {% endif %}
+  </section>
   {% endif %}
-  <p class="footer-disclaimer">本分析仅基于财务报表数据，不构成投资建议。</p>
-</footer>
+
+  <!-- Peer comparison -->
+  {% if (has_peers and peer_comparison) or industry_benchmark_insights %}
+  <section class="chapter" id="ch5c-peers">
+    <h2 class="chapter-title">🏭 行业对标</h2>
+    {% if industry_benchmark_insights %}
+    <div class="insight-panel">
+      <h3>行业对标解读</h3>
+      <p>{{ industry_benchmark_insights.summary }}</p>
+      {% if industry_benchmark_insights.points %}
+      <ul>
+        {% for point in industry_benchmark_insights.points %}
+        <li>{{ point }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if has_peers and peer_comparison %}
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">锂电概念股核心财务指标横向对比（万得 Wind 实时数据）</p>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);color:var(--text-muted);text-align:right;">
+            <th style="text-align:left;padding:8px;">公司</th>
+            <th style="padding:8px;">营业收入</th>
+            <th style="padding:8px;">净利润</th>
+            <th style="padding:8px;">总资产</th>
+            <th style="padding:8px;">净资产</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in peer_comparison %}
+          <tr style="border-bottom:1px solid var(--border);text-align:right;{{ 'background:rgba(88,166,255,0.08);' if p.is_current else '' }}">
+            <td style="text-align:left;padding:8px;font-weight:{{ '700' if p.is_current else '400' }};">
+              {{ p.name }} <span style="color:var(--text-muted);font-size:11px;">{{ p.windcode }}</span>{% if p.is_current %} ◀{% endif %}
+            </td>
+            <td style="padding:8px;">{{ p.revenue }}</td>
+            <td style="padding:8px;">{{ p.profit }}</td>
+            <td style="padding:8px;">{{ p.assets }}</td>
+            <td style="padding:8px;">{{ p.equity }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% elif industry_benchmark_insights and not industry_benchmark_insights.available %}
+    <div class="empty-state">{{ industry_benchmark_insights.summary }}</div>
+    {% endif %}
+    {% if industry_comparison and industry_comparison.available %}
+    <div style="overflow-x:auto;margin-top:16px;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);color:var(--text-muted);text-align:right;">
+            <th style="text-align:left;padding:8px;">指标</th>
+            <th style="padding:8px;">本公司</th>
+            <th style="padding:8px;">行业均值</th>
+            <th style="padding:8px;">差值</th>
+            <th style="padding:8px;">判断</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in industry_comparison.comparisons %}
+          <tr style="border-bottom:1px solid var(--border);text-align:right;">
+            <td style="text-align:left;padding:8px;">{{ row.metric }}</td>
+            <td style="padding:8px;">{{ row.current_value }}</td>
+            <td style="padding:8px;">{{ row.peer_average }}</td>
+            <td style="padding:8px;">{{ row.delta }}</td>
+            <td style="padding:8px;">{{ row.relation }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <!-- Chapter 6: Summary -->
+  <section class="chapter" id="ch6-summary">
+    <h2 class="chapter-title">📝 总结</h2>
+    <div class="summary-box">
+      {{ report_markdown.split('## 六、总结')[1].split('---')[0] | safe if '## 六、总结' in report_markdown else '' }}
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="report-footer">
+    {% if lithium_trend %}
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">📊 宏观数据（碳酸锂期货价格）由万得 Wind 金融数据服务提供</p>
+    {% elif skipped_external > 0 %}
+    <p class="footer-warning">⚠️ 本报告暂未接入锂价、行业增速等外部市场数据，{{ skipped_external }} 条风险规则未启用。</p>
+    {% endif %}
+    <p class="footer-disclaimer">本分析仅基于财务报表数据，不构成投资建议。</p>
+  </footer>
 
 <!-- ── Hidden report data for download ── -->
 <script id="report-markdown-data" type="text/markdown">{{ report_markdown | e }}</script>

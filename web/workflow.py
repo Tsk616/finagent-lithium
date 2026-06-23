@@ -22,6 +22,15 @@ from nodes.filter_key_indicators import filter_key_indicators
 from nodes.linkage_analysis import linkage_analysis
 from nodes.anomaly_scan import anomaly_scan
 from nodes.generate_report import generate_report, _generate_fallback_report, _build_input_json
+from nodes.metric_config import (
+    build_industry_comparison,
+    calculate_weighted_score,
+    enrich_metric_results,
+    enrich_sector_indicator_results,
+    flatten_indicator_results,
+    summarize_metric_config,
+)
+from nodes.interpretation import build_structured_interpretations
 
 try:
     from lithium_kb import LithiumKnowledgeBase
@@ -60,6 +69,31 @@ def run_pipeline(
     notes_data = notes_data or {}
     primary_business = primary_business or []
 
+    # ── Wind-enhanced sector classification ──
+    # If stock_code is provided but no primary_business, try Wind for keywords.
+    _wind_classified = False
+    if stock_code and not primary_business:
+        try:
+            from nodes.wind_adapter import (
+                stock_code_to_windcode,
+                fetch_company_info_enhanced,
+                extract_business_keywords,
+            )
+            windcode = stock_code_to_windcode(stock_code)
+            wind_info = fetch_company_info_enhanced(windcode)
+            if wind_info:
+                # Use Wind company name if user didn't provide one
+                if not company_name:
+                    company_name = wind_info.get("name", "")
+                # Extract business keywords for sector matching
+                wind_keywords = extract_business_keywords(wind_info)
+                if wind_keywords:
+                    primary_business = wind_keywords
+                    _wind_classified = True
+        except Exception:
+            _wind_classified = False
+            pass
+
     state: Dict[str, Any] = {
         "company_name": company_name,
         "stock_code": stock_code,
@@ -68,6 +102,7 @@ def run_pipeline(
         "notes_data": notes_data,
         "primary_business": primary_business,
         "manual_sector": manual_sector,
+        "_wind_classified": _wind_classified,
     }
 
     # Node 1: classify_sector
@@ -75,6 +110,25 @@ def run_pipeline(
         company_name=company_name, stock_code=stock_code,
         primary_business=primary_business, manual_sector=manual_sector, kb=KB)
     state.update(sector)
+
+    # ── Wind data enrichment (optional, graceful degradation) ──
+    # If stock code provided but financial data is sparse, try Wind.
+    if stock_code and (not financial_data or len(financial_data) < 5):
+        try:
+            from nodes.wind_adapter import stock_code_to_windcode, fetch_financials
+            windcode = stock_code_to_windcode(stock_code)
+            wind_data = fetch_financials(windcode, period=current_period or "最新一期")
+            if wind_data:
+                # Merge: Wind data as base, user-provided data on top
+                merged = {**wind_data, **financial_data}
+                financial_data = merged
+                state["_wind_enriched"] = True
+                state["_wind_accounts_count"] = len(wind_data)
+        except Exception:
+            pass  # Graceful degradation — pipeline continues without Wind
+
+    # Update state with possibly enriched financial_data
+    state["financial_data"] = financial_data
 
     # Node 2: validate_data
     validation = validate_data(
@@ -87,7 +141,9 @@ def run_pipeline(
     # Node 3: calculate_general
     general = calculate_general(financial_data=financial_data, notes_data=notes_data)
     general_inds = annotate_formulas(general["general_indicators"])
-    state["general_indicators"] = general_inds
+    state["general_indicators"] = enrich_metric_results(
+        state.get("_sector_code"), general_inds
+    )
 
     # Node 4: calculate_sector
     sector_inds = calculate_sector(
@@ -95,7 +151,56 @@ def run_pipeline(
         sector_level2=state.get("sector_level2"),
         sub_sectors=state.get("sub_sectors"),
         _sector_code=state.get("_sector_code"), kb=KB)
-    state["sector_indicators"] = sector_inds["sector_indicators"]
+    state["sector_indicators"] = enrich_sector_indicator_results(
+        sector_inds["sector_indicators"]
+    )
+    state["metric_config_summary"] = summarize_metric_config(state.get("_sector_code"))
+    state["weighted_score"] = calculate_weighted_score(
+        flatten_indicator_results(
+            general_indicators=state["general_indicators"],
+            sector_indicators=state["sector_indicators"],
+        )
+    )
+
+    # ── Wind: Macro + Peer context (optional) ──
+    try:
+        from nodes.wind_adapter import (
+            get_lithium_price_trend, fetch_peers_financials, get_wind_status, stock_code_to_windcode,
+        )
+        state["wind_status"] = get_wind_status()
+        if state["wind_status"].get("live_calls_enabled", True):
+            # Lithium price trend for anomaly external rules
+            lithium_trend = get_lithium_price_trend(timeout=20)
+            if lithium_trend:
+                state["_lithium_trend"] = lithium_trend
+                state["macro_context"] = {"lithium_trend": lithium_trend}
+
+            # Peer financials for cross-section comparison
+            peers = fetch_peers_financials(max_peers=8, timeout=60)
+            if peers:
+                # Tag the current company
+                current_wc = stock_code_to_windcode(stock_code) if stock_code else ""
+                for p in peers:
+                    p["is_current"] = (p["windcode"] == current_wc)
+                state["_peer_comparison"] = peers
+    except Exception:
+        pass
+
+    state.setdefault("macro_context", {})
+    if "wind_status" not in state:
+        try:
+            from nodes.wind_adapter import get_wind_status
+            state["wind_status"] = get_wind_status()
+        except Exception:
+            state["wind_status"] = {"live_calls_enabled": False, "last_error": "Wind adapter unavailable"}
+
+    state["industry_comparison"] = build_industry_comparison(
+        flatten_indicator_results(
+            general_indicators=state["general_indicators"],
+            sector_indicators=state["sector_indicators"],
+        ),
+        state.get("_peer_comparison", []),
+    )
 
     # Node 5: filter_key_indicators
     key_inds = filter_key_indicators(
@@ -117,15 +222,27 @@ def run_pipeline(
         llm_config=llm_config)
     state["linkage_diagnosis"] = linkage["linkage_diagnosis"]
 
-    # Node 7: anomaly_scan
+    # Node 7: anomaly_scan (with macro context for external rules)
     anomaly = anomaly_scan(
         general_indicators=state["general_indicators"],
         sector_indicators=state["sector_indicators"],
         financial_data=financial_data,
         _sector_code=state.get("_sector_code"),
-        sub_sectors=state.get("sub_sectors"), kb=KB)
+        sub_sectors=state.get("sub_sectors"), kb=KB,
+        macro_context=state.get("_lithium_trend"))
     state["anomaly_signals"] = anomaly["anomaly_signals"]
     state["skipped_external_rules"] = anomaly.get("skipped_external_rules", 0)
+
+    interpretations = build_structured_interpretations(
+        general_indicators=state["general_indicators"],
+        sector_indicators=state["sector_indicators"],
+        anomaly_signals=state["anomaly_signals"],
+        macro_context=state.get("macro_context", {}),
+        industry_comparison=state.get("industry_comparison", {}),
+        weighted_score=state.get("weighted_score"),
+        llm_config=llm_config,
+    )
+    state.update(interpretations)
 
     # Node 8: generate_report
     report = generate_report(
@@ -144,6 +261,11 @@ def run_pipeline(
         error_log=state.get("error_log", []),
         data_completeness=state.get("data_completeness"),
         skipped_external_rules=state.get("skipped_external_rules", 0),
+        weighted_score=state.get("weighted_score"),
+        metric_interpretations=state.get("metric_interpretations"),
+        macro_insights=state.get("macro_insights"),
+        industry_benchmark_insights=state.get("industry_benchmark_insights"),
+        risk_summary=state.get("risk_summary"),
         llm_config=llm_config)
     state["report_markdown"] = report["report_markdown"]
 

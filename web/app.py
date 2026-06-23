@@ -169,17 +169,42 @@ def download_report():
 
 @app.route("/demo")
 def demo():
-    """Demo page with pre-loaded 宁德时代 data."""
-    from nodes.calculate_sector import _test_data_sample as sector_data
-    data = sector_data("宁德时代")
+    """Demo page with 宁德时代 data. Uses Wind live data when available.
+
+    Query params:
+        period: Report period, e.g. '2025年报', '2024年报', '最新一期'
+                Default: '2025年报'
+    """
+    current_period = request.args.get("period", "2025年报")
+    financial_data = None
+
+    # Try Wind live data first
+    try:
+        from nodes.wind_adapter import fetch_financials
+        financial_data = fetch_financials("300750.SZ", current_period)
+    except Exception:
+        pass
+
+    wind_used = False
+    wind_count = 0
+    if not financial_data:
+        # Fallback to hardcoded sample data
+        from nodes.calculate_sector import _test_data_sample as sector_data
+        financial_data = sector_data("宁德时代")
+    else:
+        wind_used = True
+        wind_count = len(financial_data)
 
     state = run_pipeline(
         company_name="宁德时代",
         stock_code="300750",
-        current_period="2025年报",
+        current_period=current_period,
         primary_business=["动力电池系统", "储能系统", "电池材料"],
-        financial_data=data,
+        financial_data=financial_data,
     )
+    if wind_used:
+        state["_wind_enriched"] = True
+        state["_wind_accounts_count"] = wind_count
     template_data = _build_template_data(state)
     return render_template("report.html", **template_data)
 
@@ -202,7 +227,7 @@ def _build_template_data(state: dict) -> dict:
             risk = str(ind.get("risk_level", ""))
             result.append({
                 "name": name,
-                "value": f"{val:.2f}{ind.get('unit','')}" if val is not None else None,
+                "value": _format_ind_value(val, ind.get('unit', '')),
                 "risk_level": risk,
                 "risk_color": risk_color(risk),
                 "normal_range": ind.get("normal_range", ""),
@@ -213,8 +238,24 @@ def _build_template_data(state: dict) -> dict:
                 "is_pending": "待补充" in risk,
                 "is_key": ind.get("is_key_indicator", False),
                 "is_fatal": ind.get("is_fatal_indicator", False),
+                "display_name": ind.get("display_name", name),
+                "canonical_name": ind.get("canonical_name", name),
+                "metric_category": ind.get("metric_category", ""),
+                "metric_type": ind.get("metric_type", ""),
+                "weight": ind.get("weight"),
+                "weight_logic": ind.get("weight_logic", ""),
             })
         return result
+
+    def group_metric_settings(items: list) -> list:
+        groups = {}
+        for item in items:
+            key = item.get("metric_type") or item.get("metric_category") or "未分类"
+            groups.setdefault(key, []).append(item)
+        return [
+            {"name": name, "indicators": indicators}
+            for name, indicators in groups.items()
+        ]
 
     general_indicators = state.get("general_indicators", {})
     general_list = simplify_inds(general_indicators)
@@ -223,12 +264,15 @@ def _build_template_data(state: dict) -> dict:
 
     sector_indicators = state.get("sector_indicators", {})
     sector_tabs = []
+    metric_settings_items = list(general_list)
     for sec_label, categories in sector_indicators.items():
         tabs = []
         for cat_name, indicators in categories.items():
+            simplified_sector_items = simplify_inds(indicators)
+            metric_settings_items.extend(simplified_sector_items)
             tabs.append({
                 "name": cat_name,
-                "indicators": simplify_inds(indicators),
+                "indicators": simplified_sector_items,
             })
         sector_tabs.append({"label": sec_label, "tabs": tabs})
 
@@ -263,8 +307,87 @@ def _build_template_data(state: dict) -> dict:
         "skipped_external": state.get("skipped_external_rules", 0),
         "error_log": state.get("error_log", []),
         "report_markdown": state.get("report_markdown", ""),
+        "weighted_score": state.get("weighted_score", {}),
+        "metric_config_summary": state.get("metric_config_summary", {}),
+        "metric_settings_groups": group_metric_settings(metric_settings_items),
+        "metric_interpretations": state.get("metric_interpretations", []),
+        "macro_context": state.get("macro_context", {}),
+        "macro_insights": state.get("macro_insights", {}),
+        "industry_benchmark_insights": state.get("industry_benchmark_insights", {}),
+        "analysis_models": state.get("analysis_models", {}),
+        "risk_summary": state.get("risk_summary", {}),
+        "wind_status": state.get("wind_status", {}),
+        "industry_comparison": state.get("industry_comparison", {}),
         "status": state.get("status", "unknown"),
+        "wind_enriched": state.get("_wind_enriched", False),
+        "wind_accounts_count": state.get("_wind_accounts_count", 0),
+        "wind_classified": state.get("_wind_classified", False),
+        # Peer comparison
+        "peer_comparison": _format_peer_data(state.get("_peer_comparison", [])),
+        "has_peers": bool(state.get("_peer_comparison")),
+        # Macro context
+        "lithium_trend": state.get("_lithium_trend"),
     }
+
+
+def _format_ind_value(val, unit: str) -> str:
+    """Format indicator value with unit, suppressing meaningless units."""
+    if val is None:
+        return None
+    # Suppress "无" unit (means dimensionless but looks confusing)
+    if not unit or unit == "无":
+        return f"{val:.2f}"
+    return f"{val:.2f}{unit}"
+
+
+# Wind code → company short name lookup (common lithium battery peers)
+_WINDCODE_NAME_MAP = {
+    "300750.SZ": "宁德时代",
+    "002594.SZ": "比亚迪",
+    "002460.SZ": "赣锋锂业",
+    "002466.SZ": "天齐锂业",
+    "300014.SZ": "亿纬锂能",
+    "688005.SH": "容百科技",
+    "300450.SZ": "先导智能",
+    "603799.SH": "华友钴业",
+    "000792.SZ": "盐湖股份",
+    "002008.SZ": "大族激光",
+    "600549.SH": "厦门钨业",
+    "600482.SH": "中国动力",
+    "601168.SH": "西部矿业",
+    "300390.SZ": "天华新能",
+    "002709.SZ": "天赐材料",
+    "002080.SZ": "中材科技",
+}
+
+
+def _format_peer_data(peers: list) -> list:
+    """Format peer comparison data for template rendering."""
+    if not peers:
+        return []
+    result = []
+    for p in peers:
+        wc = p.get("windcode", "")
+        item = {
+            "windcode": wc,
+            "name": p.get("name") or _WINDCODE_NAME_MAP.get(wc, wc),
+            "is_current": p.get("is_current", False),
+        }
+        # Format large numbers for display
+        for key, label in [("revenue", "营业收入"), ("profit", "净利润"),
+                           ("assets", "总资产"), ("equity", "净资产")]:
+            val = p.get(key)
+            if val is not None:
+                if abs(val) >= 1e12:
+                    item[key] = f"{val/1e12:.2f}万亿"
+                elif abs(val) >= 1e8:
+                    item[key] = f"{val/1e8:.0f}亿"
+                else:
+                    item[key] = f"{val:.0f}"
+            else:
+                item[key] = "-"
+        result.append(item)
+    return result
 
 
 def _parse_json_field(raw: str) -> dict:

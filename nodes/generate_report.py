@@ -90,6 +90,11 @@ def generate_report(
     error_log: Optional[List[str]] = None,
     data_completeness: Optional[float] = None,
     skipped_external_rules: int = 0,
+    weighted_score: Optional[Dict[str, Any]] = None,
+    metric_interpretations: Optional[List[Dict[str, Any]]] = None,
+    macro_insights: Optional[Dict[str, Any]] = None,
+    industry_benchmark_insights: Optional[Dict[str, Any]] = None,
+    risk_summary: Optional[Dict[str, Any]] = None,
     llm_config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Generate a plain-language financial analysis report.
@@ -124,7 +129,8 @@ def generate_report(
         sector_level1, sector_level2, sector_characteristics, analysis_focus,
         sub_sectors, general_indicators, sector_indicators,
         key_indicators_for_linkage, linkage_diagnosis, anomaly_signals,
-        error_log, data_completeness, skipped_external_rules,
+        error_log, data_completeness, skipped_external_rules, weighted_score,
+        metric_interpretations, macro_insights, industry_benchmark_insights, risk_summary,
     )
 
     user_message = json.dumps(input_data, ensure_ascii=False, indent=2)
@@ -179,6 +185,11 @@ def _build_input_json(
     error_log: List[str],
     data_completeness: Optional[float],
     skipped_external_rules: int,
+    weighted_score: Optional[Dict[str, Any]] = None,
+    metric_interpretations: Optional[List[Dict[str, Any]]] = None,
+    macro_insights: Optional[Dict[str, Any]] = None,
+    industry_benchmark_insights: Optional[Dict[str, Any]] = None,
+    risk_summary: Optional[Dict[str, Any]] = None,
 ) -> Dict:
     """Build the structured input JSON for the LLM."""
 
@@ -253,6 +264,11 @@ def _build_input_json(
         "linkage_diagnosis": linkage_diagnosis[:5],
         "anomaly_signals": anomaly_signals,
         "skipped_external_rules": skipped_external_rules,
+        "weighted_score": weighted_score or {},
+        "metric_interpretations": (metric_interpretations or [])[:12],
+        "macro_insights": macro_insights or {},
+        "industry_benchmark_insights": industry_benchmark_insights or {},
+        "risk_summary": risk_summary or {},
     }
 
 
@@ -280,6 +296,7 @@ def _generate_fallback_report(data: Dict) -> str:
     linkage = data.get("linkage_diagnosis", [])
     anomalies = data.get("anomaly_signals", [])
     skipped = data.get("skipped_external_rules", 0)
+    weighted_score = data.get("weighted_score", {})
 
     cname = company.get("name", "未知公司")
     period = company.get("period", "最新报告期")
@@ -345,6 +362,12 @@ def _generate_fallback_report(data: Dict) -> str:
     pending = dq.get("pending_indicators", 0)
     if pending > 0:
         lines.append(f"> ⚪ 有 {pending} 项指标因缺少上期数据，暂时无法计算。")
+    if weighted_score.get("score") is not None:
+        lines.append(
+            f"> 综合评分：**{weighted_score.get('score')} / 100**"
+            f"（可用权重 {weighted_score.get('available_weight', 0)}%，"
+            f"跳过缺失权重 {weighted_score.get('skipped_weight', 0)}%）。"
+        )
     lines.append("")
 
     # ── Chapter 3: Sector-specific indicators ──

@@ -1,0 +1,3155 @@
+{
+  "version": 1,
+  "source_file": "锂电行业指标赋权（通用+特殊）(3).xlsx",
+  "weight_unit": "percent",
+  "normalization": "normalize_available_metrics",
+  "sectors": {
+    "1.1": {
+      "name": "1. 锂资源开采 & 锂盐（碳酸锂 / 氢氧化锂）",
+      "primary_category": "一、上游资源与锂盐",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 12.0,
+          "weight_logic": "锂价波动直接决定行业盈利，是最核心基础指标"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "剔除政府补助等一次性收益，反映锂矿 / 冶炼主业真实赚钱能力"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "锂盐贸易属性强，回款质量直接验证利润真实性，避免应收存货虚增利润"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 7.0,
+          "weight_logic": "矿山 / 冶炼厂重资产扩产依赖举债，杠杆过高在锂价下行期直接引发偿债危机"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 6.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力，比流动比率更具参考性（锂盐存货减值风险极高）"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标，反映流动资产对短期负债的整体覆盖能力"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 5.0,
+          "weight_logic": "反映锂盐产能扩张与市场份额变化，是行业成长性核心指标"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险，锂盐行业正常账期短，应收异常高增需警惕"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "锂价波动下直接识别囤货赌涨价或被动累库的风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "资源行业费用管控直接影响最终利润留存，重点关注管理费用与财务费用"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 2.0,
+          "weight_logic": "股东综合回报指标，综合反映盈利、周转、杠杆三大能力"
+        },
+        {
+          "canonical_name": "存货跌价损失率",
+          "display_name": "存货跌价损失率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 10.0,
+          "weight_logic": "锂价暴跌引发的存货减值是行业最大雷区，权重最高的特殊指标，直接决定当期利润真实性"
+        },
+        {
+          "canonical_name": "存货周转率 / 周转天数",
+          "display_name": "存货周转率 / 周转天数",
+          "aliases": [
+            "存货周转率",
+            "周转天数"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 6.0,
+          "weight_logic": "映射产品去库能力，周转下滑 = 企业囤货赌涨价或下游采购需求疲软"
+        },
+        {
+          "canonical_name": "固定资产周转率",
+          "display_name": "固定资产周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 5.0,
+          "weight_logic": "映射矿山 / 冶炼产线产能利用率，数值偏低 = 开工不足、单位折旧成本抬升"
+        },
+        {
+          "canonical_name": "加工费毛利率",
+          "display_name": "加工费毛利率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "剔除金属价格干扰，真实反映锂盐加工环节盈利，是企业核心竞争力指标"
+        },
+        {
+          "canonical_name": "合同负债同比变动率",
+          "display_name": "合同负债同比变动率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 3.0,
+          "weight_logic": "映射未来 6-12 个月长单储备，高增 = 订单饱满；负增长 = 下游需求萎缩"
+        },
+        {
+          "canonical_name": "单位锂盐成本变动率",
+          "display_name": "单位锂盐成本变动率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "映射采矿 / 冶炼生产管理能力，成本逆势上涨 = 产能闲置、管控混乱"
+        },
+        {
+          "canonical_name": "现金周转周期",
+          "display_name": "现金周转周期",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 2.0,
+          "weight_logic": "核心垫资压力指标，直接反映锂盐行业资金占用情况"
+        },
+        {
+          "canonical_name": "信用减值损失 / 应收账款",
+          "display_name": "信用减值损失 / 应收账款",
+          "aliases": [
+            "信用减值损失",
+            "应收账款"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 2.0,
+          "weight_logic": "反映下游正极厂坏账风险，是回款质量的补充校验指标"
+        }
+      ]
+    },
+    "1.2": {
+      "name": "2. 钴 / 镍资源 & 三元前驱体",
+      "primary_category": "一、上游资源与锂盐",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射金属价差 + 加工费水平，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "剔除一次性收益，反映前驱体主业真实盈利（加工费极薄，主业亏损即生存危机）"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "上下游账期错配（上游现款、下游 3-4 个月），回款质量直接决定现金流安全"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 6.0,
+          "weight_logic": "前驱体扩产依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力，钴镍存货价格波动大"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "金属价格波动下直接识别囤货风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "加工行业费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "原材料成本占营业成本比重",
+          "display_name": "原材料成本占营业成本比重",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "90% 以上成本为金属原料，占比过高代表无任何价格缓冲空间，盈利完全随金属价格波动"
+        },
+        {
+          "canonical_name": "加工费毛利率",
+          "display_name": "加工费毛利率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 8.0,
+          "weight_logic": "剔除金属价格干扰，真实反映行业竞争激烈程度与企业盈利水平"
+        },
+        {
+          "canonical_name": "前五客户营收占比",
+          "display_name": "前五客户营收占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 7.0,
+          "weight_logic": "客户高度集中于头部正极厂（前五大占比普遍超 70%），单一客户流失直接冲击经营稳定性"
+        },
+        {
+          "canonical_name": "应付账款周转天数",
+          "display_name": "应付账款周转天数",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 4.0,
+          "weight_logic": "反映对上游矿企的议价能力，天数越短代表付款越快、现金流压力越大"
+        },
+        {
+          "canonical_name": "现金周转周期（CCC）",
+          "display_name": "现金周转周期（CCC）",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 3.0,
+          "weight_logic": "核心垫资压力指标，直接反映上下游账期错配带来的资金占用"
+        },
+        {
+          "canonical_name": "信用减值损失 / 应收账款",
+          "display_name": "信用减值损失 / 应收账款",
+          "aliases": [
+            "信用减值损失",
+            "应收账款"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 3.0,
+          "weight_logic": "反映下游正极厂坏账风险"
+        },
+        {
+          "canonical_name": "在建工程变动率",
+          "display_name": "在建工程变动率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 2.0,
+          "weight_logic": "映射产能扩张节奏，高增 = 激进扩产加剧行业内卷"
+        },
+        {
+          "canonical_name": "经营现金流 / 营业收入",
+          "display_name": "经营现金流 / 营业收入",
+          "aliases": [
+            "经营现金流",
+            "营业收入"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 2.0,
+          "weight_logic": "直接反映垫资压力下的现金生成能力"
+        }
+      ]
+    },
+    "2.1": {
+      "name": "1. 正极材料（磷酸铁锂 / 三元正极）",
+      "primary_category": "二、中游四大主材 + 箔材辅材",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射产品技术溢价与加工费水平，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "正极行业竞争激烈，主业盈利是核心生存底线"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "下游电池厂账期 3-5 个月，回款质量直接决定盈利真实性"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 6.0,
+          "weight_logic": "正极材料扩产依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力，锂盐存货减值风险高"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "锂价波动下直接识别囤货风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "加工行业费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "研发费用率",
+          "display_name": "研发费用率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 10.0,
+          "weight_logic": "正极材料技术迭代极快（高镍、磷酸锰铁锂等），研发投入直接决定产品溢价与长期竞争力"
+        },
+        {
+          "canonical_name": "原材料成本占比",
+          "display_name": "原材料成本占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 8.0,
+          "weight_logic": "75%-85% 成本为锂钴镍金属，占比过高代表无任何价格缓冲空间"
+        },
+        {
+          "canonical_name": "存货原材料占比",
+          "display_name": "存货原材料占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 7.0,
+          "weight_logic": "直接反映企业对锂价周期的判断，过高代表赌涨价囤货，过低代表备货不足错失订单"
+        },
+        {
+          "canonical_name": "应收 - 营收增速差",
+          "display_name": "应收 - 营收增速差",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 5.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险，是收入真实性核心校验项"
+        },
+        {
+          "canonical_name": "存货周转率",
+          "display_name": "存货周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 3.0,
+          "weight_logic": "映射正极成品、原料去库能力，下滑 = 电池端需求疲软"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 3.0,
+          "weight_logic": "映射电池厂回款速度与行业话语权"
+        }
+      ]
+    },
+    "2.2": {
+      "name": "2. 负极材料（人造 / 天然 / 硅碳负极）",
+      "primary_category": "二、中游四大主材 + 箔材辅材",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射产品结构与加工费水平，高端硅碳负极毛利显著高于低端人造石墨"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "负极行业盈利稳定性优于正极，主业盈利是核心"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "下游电池厂账期 3-4 个月，回款质量直接决定现金流安全"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 6.0,
+          "weight_logic": "人造石墨重资产扩产依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "石墨原料价格波动下直接识别囤货风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "加工行业费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "固定资产周转率",
+          "display_name": "固定资产周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 10.0,
+          "weight_logic": "人造石墨重资产属性极强，产能利用率是盈利核心，该指标直接反映产能闲置、巨额折旧亏损风险"
+        },
+        {
+          "canonical_name": "研发费用率",
+          "display_name": "研发费用率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 8.0,
+          "weight_logic": "硅碳负极技术壁垒高，研发投入不足直接导致高端产品缺位，长期竞争力衰退"
+        },
+        {
+          "canonical_name": "原材料成本占比",
+          "display_name": "原材料成本占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 7.0,
+          "weight_logic": "60%-75% 成本为石墨 / 煤炭原料，占比过高代表上游涨价挤压利润"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 5.0,
+          "weight_logic": "映射下游电池厂回款速度与行业话语权"
+        },
+        {
+          "canonical_name": "存货周转天数",
+          "display_name": "存货周转天数",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 4.0,
+          "weight_logic": "映射产品去库能力，天数过高 = 负极产品滞销、库存积压"
+        },
+        {
+          "canonical_name": "固定资产成新率",
+          "display_name": "固定资产成新率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 3.0,
+          "weight_logic": "映射设备技术水平，过低 = 设备老旧、无法生产高端产品"
+        }
+      ]
+    },
+    "2.3": {
+      "name": "3. 电解液（溶质 / 溶剂 / 添加剂）",
+      "primary_category": "二、中游四大主材 + 箔材辅材",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射六氟磷酸锂价格波动与加工费水平，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "电解液行业价格战激烈，主业盈利是核心生存底线"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "下游电池厂账期 3-4 个月，回款质量直接决定盈利真实性"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 6.0,
+          "weight_logic": "电解液扩产依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "六氟价格波动下直接识别囤货风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "化工行业费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "存货周转天数",
+          "display_name": "存货周转天数",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 12.0,
+          "weight_logic": "电解液保质期仅 6-12 个月，周转天数超标直接代表产品临期、滞销，面临大额减值亏损，是行业最核心风险指标"
+        },
+        {
+          "canonical_name": "六氟磷酸锂成本占比",
+          "display_name": "六氟磷酸锂成本占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "80%-90% 成本为六氟磷酸锂，盈利完全绑定单一原料价格，占比过高代表无任何成本缓冲空间"
+        },
+        {
+          "canonical_name": "存货跌价损失率",
+          "display_name": "存货跌价损失率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 7.0,
+          "weight_logic": "临期产品减值是行业最大雷区，直接反映库存风险"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 5.0,
+          "weight_logic": "映射下游电池厂回款速度与行业话语权"
+        },
+        {
+          "canonical_name": "存货周转率",
+          "display_name": "存货周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 3.0,
+          "weight_logic": "映射产品去库能力"
+        }
+      ]
+    },
+    "2.4": {
+      "name": "4. 隔膜（湿法 / 干法 / 涂覆隔膜）",
+      "primary_category": "二、中游四大主材 + 箔材辅材",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射涂覆工艺技术溢价，高端涂覆隔膜毛利显著高于低端基膜"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "隔膜行业头部集中度高，主业盈利是核心竞争力"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "下游电池厂账期 3-4 个月，回款质量直接决定现金流安全"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 6.0,
+          "weight_logic": "隔膜重资产扩产依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "聚烯烃原料价格波动下直接识别囤货风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "化工行业费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "固定资产成新率",
+          "display_name": "固定资产成新率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 11.0,
+          "weight_logic": "涂覆隔膜技术壁垒高，设备新旧程度直接决定产品品质与良率，是核心竞争力指标"
+        },
+        {
+          "canonical_name": "制造费用占营业成本比重",
+          "display_name": "制造费用占营业成本比重",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "直接反映产能利用率，占比过高代表设备闲置、折旧成本过度分摊侵蚀利润"
+        },
+        {
+          "canonical_name": "固定资产周转率",
+          "display_name": "固定资产周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 8.0,
+          "weight_logic": "映射产能利用率，偏低代表新增产能闲置、规模效应消失"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 5.0,
+          "weight_logic": "映射下游电池厂回款速度与行业话语权"
+        },
+        {
+          "canonical_name": "存货周转率",
+          "display_name": "存货周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 3.0,
+          "weight_logic": "映射产品去库能力"
+        }
+      ]
+    },
+    "2.5": {
+      "name": "5. 锂电铜箔 / 铝箔",
+      "primary_category": "二、中游四大主材 + 箔材辅材",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射加工费水平，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "铜箔 / 铝箔行业纯加工属性，毛利极薄，主业盈利是核心生存底线"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "下游电池厂账期 3-4 个月，回款质量直接决定现金流安全"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 6.0,
+          "weight_logic": "铜箔 / 铝箔重资产扩产依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "铜 / 铝价格波动下直接识别囤货风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "加工行业费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "加工费毛利率",
+          "display_name": "加工费毛利率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 12.0,
+          "weight_logic": "剔除金属价格干扰后，真实反映行业竞争激烈程度与企业盈利水平，是核心竞争力指标"
+        },
+        {
+          "canonical_name": "金属原料成本占营业成本比重",
+          "display_name": "金属原料成本占营业成本比重",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "85%-92% 成本为铜 / 铝金属，占比过高代表企业完全沦为代加工，金属价格小幅波动即可导致亏损"
+        },
+        {
+          "canonical_name": "固定资产周转率",
+          "display_name": "固定资产周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 8.0,
+          "weight_logic": "映射设备产能利用率，偏低代表加工设备开工不足、规模效应消失"
+        },
+        {
+          "canonical_name": "存货周转率",
+          "display_name": "存货周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 5.0,
+          "weight_logic": "映射金属库存周转，下滑 = 原料备货过多、产品滞销"
+        },
+        {
+          "canonical_name": "设备折旧占营业成本比重",
+          "display_name": "设备折旧占营业成本比重",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "重设备加工属性，直接反映产能利用率"
+        }
+      ]
+    },
+    "2.6": {
+      "name": "6. 锂电辅材（导电剂 / 粘结剂 / 极耳）",
+      "primary_category": "二、中游四大主材 + 箔材辅材",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 12.0,
+          "weight_logic": "直接映射配方技术溢价，配方型辅材毛利显著高于结构型辅材"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "辅材行业细分度高，配方型产品具备技术溢价，主业盈利是核心"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "下游电池 / 材料厂账期 3-4 个月，回款质量直接决定盈利真实性"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "辅材行业扩产投入适中，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "原料价格波动下直接识别囤货风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 5.0,
+          "weight_logic": "细分行业费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 5.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "研发费用率",
+          "display_name": "研发费用率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 10.0,
+          "weight_logic": "配方型辅材技术壁垒高，研发投入不足直接导致产品老化、被替代风险高"
+        },
+        {
+          "canonical_name": "前五客户营收占比",
+          "display_name": "前五客户营收占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 9.0,
+          "weight_logic": "客户高度绑定电池 / 材料厂（前五大占比普遍超 60%），单一客户流失直接冲击经营稳定性"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 7.0,
+          "weight_logic": "映射下游客户回款速度与行业话语权"
+        },
+        {
+          "canonical_name": "存货周转率",
+          "display_name": "存货周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 5.0,
+          "weight_logic": "映射产品去库能力"
+        }
+      ]
+    },
+    "3.1": {
+      "name": "1. 动力电池电芯（车用）",
+      "primary_category": "三、中游电芯 & 结构件",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "直接映射行业供需格局与产品溢价，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 8.0,
+          "weight_logic": "动力电池行业价格战激烈，重资产折旧压力大，主业盈利是核心生存底线"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "下游车企账期 3-6 个月，回款质量直接决定盈利真实性与现金流安全"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 8.0,
+          "weight_logic": "全锂电最重资产赛道，扩产高度依赖举债，杠杆过高直接引发偿债危机"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 7.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力，是行业资金安全的核心校验"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "锂价波动下直接识别囤货风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "重资产行业费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "有息负债 / 总资产",
+          "display_name": "有息负债 / 总资产",
+          "aliases": [
+            "有息负债",
+            "总资产"
+          ],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 2.0,
+          "weight_logic": "扩产的刚性偿债压力，直接决定企业抗周期能力"
+        },
+        {
+          "canonical_name": "固定资产周转率",
+          "display_name": "固定资产周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 12.0,
+          "weight_logic": "全锂电最重资产赛道，产能利用率是企业生死线，该指标直接反映产能闲置、巨额折旧亏损风险"
+        },
+        {
+          "canonical_name": "现金周转周期 CCC",
+          "display_name": "现金周转周期 CCC",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 9.0,
+          "weight_logic": "直接反映企业在全产业链的话语权，过高代表上下游两头挤压，现金流持续承压"
+        },
+        {
+          "canonical_name": "存货产成品占比",
+          "display_name": "存货产成品占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 7.0,
+          "weight_logic": "映射车市需求，过高代表新能源车销量下滑、电池滞销积压"
+        },
+        {
+          "canonical_name": "前五车企客户占比",
+          "display_name": "前五车企客户占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 5.0,
+          "weight_logic": "映射客户集中风险，过高代表车企压价压账、客户流失风险大"
+        },
+        {
+          "canonical_name": "在建工程同比增速",
+          "display_name": "在建工程同比增速",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "映射未来产能，高增 = 1-2 年后供给过剩；负增长 = 收缩观望"
+        }
+      ]
+    },
+    "3.2": {
+      "name": "2. 储能电池电芯",
+      "primary_category": "三、中游电芯 & 结构件",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射行业供需格局与产品溢价，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "储能电池行业盈利稳定性优于动力电池，主业盈利是核心"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "下游集成商 / 海外客户账期 4-5 个月，回款质量直接决定盈利真实性"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 6.0,
+          "weight_logic": "储能电池重资产扩产依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "锂价波动下直接识别囤货风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "重资产行业费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "合同负债 / 近 12 个月营业收入",
+          "display_name": "合同负债 / 近 12 个月营业收入",
+          "aliases": [
+            "合同负债",
+            "近 12 个月营业收入"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 11.0,
+          "weight_logic": "储能电池海外长单占比极高，合同负债直接反映未来 1 年营收确定性，是核心预测指标"
+        },
+        {
+          "canonical_name": "汇兑损益 / 营业收入（绝对值）",
+          "display_name": "汇兑损益 / 营业收入（绝对值）",
+          "aliases": [
+            "汇兑损益",
+            "营业收入（绝对值）"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "海外业务占比超 50%，汇率波动直接侵蚀主业利润，该指标反映汇率风险冲击强度"
+        },
+        {
+          "canonical_name": "存货周转天数",
+          "display_name": "存货周转天数",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 7.0,
+          "weight_logic": "映射储能项目交付节奏，天数偏高代表项目交付延期、产品积压"
+        },
+        {
+          "canonical_name": "在建工程同比变动率",
+          "display_name": "在建工程同比变动率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 5.0,
+          "weight_logic": "映射产能扩张节奏，高增 = 布局远期储能需求；负增长 = 对行业前景悲观"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 4.0,
+          "weight_logic": "映射客户回款速度与行业话语权"
+        }
+      ]
+    },
+    "3.3": {
+      "name": "3. 消费电池电芯（3C / 电动工具）",
+      "primary_category": "三、中游电芯 & 结构件",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射产品技术溢价，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "消费电池行业产品迭代快，技术溢价高，主业盈利是核心竞争力"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "下游海外消费电子品牌账期 3-4 个月，回款质量直接决定盈利真实性"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "消费电池扩产依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "原料价格波动下直接识别囤货风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "消费电子行业渠道、研发费用高，费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "研发费用率",
+          "display_name": "研发费用率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 11.0,
+          "weight_logic": "消费电池产品迭代速度快，小型化、快充技术是核心竞争力，研发投入不足直接导致新品断层"
+        },
+        {
+          "canonical_name": "销售费用率",
+          "display_name": "销售费用率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "海外渠道投入高，该指标反映获客成本，过高代表渠道竞争加剧、利润被侵蚀"
+        },
+        {
+          "canonical_name": "存货中在产品占比",
+          "display_name": "存货中在产品占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 7.0,
+          "weight_logic": "映射生产模式，占比偏高代表多品类柔性生产、订单分散，过高代表生产排产混乱"
+        },
+        {
+          "canonical_name": "存货周转天数",
+          "display_name": "存货周转天数",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 5.0,
+          "weight_logic": "映射成品去库能力，天数偏高代表老款产品滞销、新品衔接断层"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 4.0,
+          "weight_logic": "映射下游客户回款速度与行业话语权"
+        }
+      ]
+    },
+    "3.4": {
+      "name": "4. 电池 PACK / 模组",
+      "primary_category": "三、中游电芯 & 结构件",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射加工费水平，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "PACK 行业纯组装加工属性，毛利极薄，主业盈利是核心生存底线"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "上下游账期错配（上游电芯短账期、下游 3-5 个月），回款质量直接决定现金流安全"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "PACK 行业扩产投入适中，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "电芯采购成本占比高，存货波动直接影响盈利"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "加工行业费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "人工成本占营业成本比重",
+          "display_name": "人工成本占营业成本比重",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 12.0,
+          "weight_logic": "纯组装加工属性，人工成本是核心成本项，占比过高直接挤压微薄加工利润"
+        },
+        {
+          "canonical_name": "应付账款周转天数",
+          "display_name": "应付账款周转天数",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 9.0,
+          "weight_logic": "直接反映对上游电芯厂的议价能力，天数越短代表付款越快、现金流压力越大"
+        },
+        {
+          "canonical_name": "现金周转周期 CCC",
+          "display_name": "现金周转周期 CCC",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 7.0,
+          "weight_logic": "映射全产业链资金地位，数值越高代表上下游两头挤压，现金流持续承压"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 5.0,
+          "weight_logic": "映射下游车企 / 集成商回款速度与行业话语权"
+        },
+        {
+          "canonical_name": "存货周转率",
+          "display_name": "存货周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 3.0,
+          "weight_logic": "映射电芯及模组成品去库能力"
+        }
+      ]
+    },
+    "3.5": {
+      "name": "5. 电池结构件（壳体 / 顶盖 / 防爆阀）",
+      "primary_category": "三、中游电芯 & 结构件",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射加工费水平，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "结构件行业纯金属加工属性，毛利薄，主业盈利是核心生存底线"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "下游电芯厂账期 3-4 个月，回款质量直接决定现金流安全"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "结构件重设备扩产依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "钢 / 铝原料价格波动下直接识别囤货风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "加工行业费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "金属原料成本占营业成本比重",
+          "display_name": "金属原料成本占营业成本比重",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 12.0,
+          "weight_logic": "金属精密加工属性，原料价格波动直接决定盈利，占比过高代表无任何价格缓冲空间"
+        },
+        {
+          "canonical_name": "设备折旧占营业成本比重",
+          "display_name": "设备折旧占营业成本比重",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "重设备加工属性，该指标直接反映产能利用率，占比过高代表设备闲置、折旧成本过高"
+        },
+        {
+          "canonical_name": "固定资产周转率",
+          "display_name": "固定资产周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 7.0,
+          "weight_logic": "映射设备产能利用率，偏低代表加工设备开工不足、规模效应消失"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 5.0,
+          "weight_logic": "映射下游电芯厂回款速度与行业话语权"
+        },
+        {
+          "canonical_name": "存货周转率",
+          "display_name": "存货周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 3.0,
+          "weight_logic": "映射金属原料、结构件成品去库能力"
+        }
+      ]
+    },
+    "4.1": {
+      "name": "1. 储能系统集成（EPC 总包）",
+      "primary_category": "四、下游应用 & 后市场",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "直接映射项目盈利空间，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 8.0,
+          "weight_logic": "储能集成行业工程类属性，毛利低、垫资大，主业盈利是核心生存底线"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "工程类业务账期 8-12 个月，回款质量直接决定现金流安全"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 6.0,
+          "weight_logic": "工程垫资依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映项目扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "电池 / PCS 设备采购成本占比高，存货波动直接影响盈利"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "工程类行业项目费用高，费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "有息负债 / 总资产",
+          "display_name": "有息负债 / 总资产",
+          "aliases": [
+            "有息负债",
+            "总资产"
+          ],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 2.0,
+          "weight_logic": "垫资的刚性偿债压力，决定抗周期能力"
+        },
+        {
+          "canonical_name": "应收账款周转天数",
+          "display_name": "应收账款周转天数",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 12.0,
+          "weight_logic": "工程类业务核心风险指标，天数超标直接代表项目回款难度大、坏账风险高"
+        },
+        {
+          "canonical_name": "经营现金流净额 / 营业收入",
+          "display_name": "经营现金流净额 / 营业收入",
+          "aliases": [
+            "经营现金流净额",
+            "营业收入"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 10.0,
+          "weight_logic": "垫资规模极大，该指标直接反映整体垫资强度，为负代表所有业务均靠自有资金垫资，现金流危机"
+        },
+        {
+          "canonical_name": "合同资产 / 营业收入",
+          "display_name": "合同资产 / 营业收入",
+          "aliases": [
+            "合同资产",
+            "营业收入"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 7.0,
+          "weight_logic": "映射收入确认滞后程度，占比越高代表完工项目越多、结算越慢，潜在风险越大"
+        },
+        {
+          "canonical_name": "前五客户营收占比",
+          "display_name": "前五客户营收占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 5.0,
+          "weight_logic": "映射大客户依赖，占比过高代表单一能源客户流失将直接冲击业绩"
+        },
+        {
+          "canonical_name": "汇兑损益 / 净利润",
+          "display_name": "汇兑损益 / 净利润",
+          "aliases": [
+            "汇兑损益",
+            "净利润"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "海外项目占比超 50%，汇率波动直接影响净利润"
+        }
+      ]
+    },
+    "4.2": {
+      "name": "2. 动力电池回收（梯次利用 + 材料再生）",
+      "primary_category": "四、下游应用 & 后市场",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射回收成本与金属价格价差，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "电池回收行业逆周期属性，主业盈利是核心生存底线"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "下游材料厂 / 储能客户账期 3-4 个月，回款质量直接决定现金流安全"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "拆解产线扩产依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映回收产能扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "废旧电池存货波动直接影响盈利"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "环保处置费用高，费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "废旧存货周转天数",
+          "display_name": "废旧存货周转天数",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 12.0,
+          "weight_logic": "该赛道存货主体为退役废旧电池，周转天数超标直接代表回收渠道不畅、拆解能力不足、库存积压"
+        },
+        {
+          "canonical_name": "全口径环保成本 / 营业收入",
+          "display_name": "全口径环保成本 / 营业收入",
+          "aliases": [
+            "全口径环保成本",
+            "营业收入"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "环保监管极其严格，全口径环保成本占营收 8%-15%，占比过高代表传统低成本回收模式难以为继"
+        },
+        {
+          "canonical_name": "再生材料收入占比",
+          "display_name": "再生材料收入占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 7.0,
+          "weight_logic": "映射业务结构，占比越高，盈利越依赖金属价格，周期波动越强"
+        },
+        {
+          "canonical_name": "固定资产周转率",
+          "display_name": "固定资产周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 5.0,
+          "weight_logic": "映射拆解产线利用率，偏低代表设备开工不足、产能闲置"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 4.0,
+          "weight_logic": "映射下游客户回款速度与行业话语权"
+        }
+      ]
+    },
+    "4.3": {
+      "name": "3. 电池贸易 / 经销",
+      "primary_category": "四、下游应用 & 后市场",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "直接映射贸易价差，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 8.0,
+          "weight_logic": "贸易行业纯流通属性，毛利极薄，主业盈利是核心生存底线"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "下游中小客户账期参差不齐，回款质量直接决定现金流安全"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 6.0,
+          "weight_logic": "贸易垫资依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映贸易规模扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "电池价格波动大，存货波动直接影响盈利"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "物流仓储费用高，费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "有息负债 / 总资产",
+          "display_name": "有息负债 / 总资产",
+          "aliases": [
+            "有息负债",
+            "总资产"
+          ],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 2.0,
+          "weight_logic": "垫资的刚性偿债压力，决定抗周期能力"
+        },
+        {
+          "canonical_name": "存货周转率",
+          "display_name": "存货周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 13.0,
+          "weight_logic": "纯流通贸易属性，薄利多销，周转速度是核心生存指标，下滑直接代表货品滞销、资金沉淀"
+        },
+        {
+          "canonical_name": "物流仓储费用占比",
+          "display_name": "物流仓储费用占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "渠道成本核心指标，占比过高直接吞噬本就微薄的贸易利润"
+        },
+        {
+          "canonical_name": "存货跌价损失率",
+          "display_name": "存货跌价损失率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 7.0,
+          "weight_logic": "映射囤货风险，比值飙升代表电池价格下跌，库存贬值亏损"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 5.0,
+          "weight_logic": "映射下游客户回款速度与信用风险"
+        },
+        {
+          "canonical_name": "净营业周期",
+          "display_name": "净营业周期",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 3.0,
+          "weight_logic": "最核心垫资指标，衡量资金链压力"
+        }
+      ]
+    },
+    "5.1": {
+      "name": "1. 锂电生产设备（整线 / 单体设备）",
+      "primary_category": "五、锂电专用设备 & 技术服务",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射设备技术溢价，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "设备行业高端装备属性，技术溢价高，主业盈利是核心竞争力"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "预收款模式为主，回款质量直接决定盈利真实性"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "设备行业轻资产属性，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映订单扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "设备生产周期长，存货波动直接影响收入确认"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "研发、销售费用高，费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "合同负债 / 近 12 个月营业收入",
+          "display_name": "合同负债 / 近 12 个月营业收入",
+          "aliases": [
+            "合同负债",
+            "近 12 个月营业收入"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 12.0,
+          "weight_logic": "纯订单驱动型业务，合同负债直接反映未来 1~1.5 年营收确定性，是全赛道最强预测指标"
+        },
+        {
+          "canonical_name": "存货中发出商品占比",
+          "display_name": "存货中发出商品占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 9.0,
+          "weight_logic": "收入确认周期长，该指标直接反映设备验收进度，占比过高代表客户推迟验收、收入确认严重延后"
+        },
+        {
+          "canonical_name": "研发费用率",
+          "display_name": "研发费用率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 7.0,
+          "weight_logic": "设备工艺迭代快，研发投入直接决定产品技术壁垒与长期竞争力"
+        },
+        {
+          "canonical_name": "合同负债增速 - 营收增速差值",
+          "display_name": "合同负债增速 - 营收增速差值",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 5.0,
+          "weight_logic": "映射订单储备，差值为正代表新订单增速高于营收，成长动力充足；负值过大代表订单枯竭"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 3.0,
+          "weight_logic": "映射验收尾款回收速度"
+        }
+      ]
+    },
+    "5.2": {
+      "name": "2. 检测设备 & 仪器",
+      "primary_category": "五、锂电专用设备 & 技术服务",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射仪器技术溢价，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "检测设备行业高端仪器属性，技术壁垒高，主业盈利是核心竞争力"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "预收款 + 售后维保模式，回款质量直接决定盈利真实性"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "轻资产属性，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映订单扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "仪器生产周期短，存货波动直接影响收入确认"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "研发、销售费用高，费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "服务收入占总营收比重",
+          "display_name": "服务收入占总营收比重",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 12.0,
+          "weight_logic": "维保服务收入稳定性极强，该指标直接反映企业抗周期能力，占比越高业绩越稳定"
+        },
+        {
+          "canonical_name": "研发费用率",
+          "display_name": "研发费用率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 9.0,
+          "weight_logic": "检测标准迭代快，研发投入不足直接导致产品无法匹配新检测标准，面临淘汰风险"
+        },
+        {
+          "canonical_name": "合同负债同比变动率",
+          "display_name": "合同负债同比变动率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 7.0,
+          "weight_logic": "映射新增订单，负增长代表下游检测设备采购需求下滑"
+        },
+        {
+          "canonical_name": "应收账款周转率",
+          "display_name": "应收账款周转率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 5.0,
+          "weight_logic": "映射下游客户回款速度"
+        },
+        {
+          "canonical_name": "发出商品 / 总存货",
+          "display_name": "发出商品 / 总存货",
+          "aliases": [
+            "发出商品",
+            "总存货"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 3.0,
+          "weight_logic": "映射在线设备占比，过高验收风险大"
+        }
+      ]
+    },
+    "5.3": {
+      "name": "3. 技术服务 / 运维",
+      "primary_category": "五、锂电专用设备 & 技术服务",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 12.0,
+          "weight_logic": "直接映射服务溢价能力，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 11.0,
+          "weight_logic": "纯服务型业务，无实物成本，主业盈利是核心"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 9.0,
+          "weight_logic": "分期收款 + 年度服务费模式，回款质量全赛道最优"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "极轻资产属性，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "无存货压力，即时偿债能力极强"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映服务规模扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 5.0,
+          "weight_logic": "人工成本是核心成本，费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 5.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "预收服务费 / 合同负债",
+          "display_name": "预收服务费 / 合同负债",
+          "aliases": [
+            "预收服务费",
+            "合同负债"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 12.0,
+          "weight_logic": "纯服务型业务，预收服务费直接反映长期服务合约规模与客户粘性，占比越高营收越稳定"
+        },
+        {
+          "canonical_name": "人力成本占营业成本比重",
+          "display_name": "人力成本占营业成本比重",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "核心成本为技术人员薪酬，占比过高代表用工成本上涨，服务利润被严重挤压"
+        },
+        {
+          "canonical_name": "前五客户营收占比",
+          "display_name": "前五客户营收占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 7.0,
+          "weight_logic": "映射大客户依赖，占比过高代表头部电池厂缩减运维预算，业绩受冲击"
+        },
+        {
+          "canonical_name": "海外收入占比",
+          "display_name": "海外收入占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 5.0,
+          "weight_logic": "映射全球化程度，中国锂电企业出海带动技术服务需求爆发"
+        },
+        {
+          "canonical_name": "预收款转化率",
+          "display_name": "预收款转化率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "营运能力",
+          "weight": 3.0,
+          "weight_logic": "映射服务交付效率，过低收入确认滞后"
+        }
+      ]
+    },
+    "6.1": {
+      "name": "全产业链一体化 / 多赛道跨界企业",
+      "primary_category": "六、一体化 / 跨界企业",
+      "metrics": [
+        {
+          "canonical_name": "销售毛利率",
+          "display_name": "销售毛利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 10.0,
+          "weight_logic": "直接映射全产业链协同效应，是行业盈利基础"
+        },
+        {
+          "canonical_name": "扣非销售净利率",
+          "display_name": "扣非销售净利率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 9.0,
+          "weight_logic": "一体化企业具备全产业链成本优势，主业盈利是核心竞争力"
+        },
+        {
+          "canonical_name": "净利润现金含量",
+          "display_name": "净利润现金含量",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利质量",
+          "weight": 8.0,
+          "weight_logic": "全产业链布局，回款质量直接决定盈利真实性"
+        },
+        {
+          "canonical_name": "资产负债率",
+          "display_name": "资产负债率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 6.0,
+          "weight_logic": "全产业链扩产依赖举债，杠杆过高引发偿债风险"
+        },
+        {
+          "canonical_name": "速动比率",
+          "display_name": "速动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 5.0,
+          "weight_logic": "剔除存货波动后的即时偿债能力"
+        },
+        {
+          "canonical_name": "流动比率",
+          "display_name": "流动比率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "短期偿债能力",
+          "weight": 4.0,
+          "weight_logic": "短期偿债基础指标"
+        },
+        {
+          "canonical_name": "营收同比增速",
+          "display_name": "营收同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "反映全产业链扩张与市场份额变化"
+        },
+        {
+          "canonical_name": "应收账款同比增速",
+          "display_name": "应收账款同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "直接识别赊销扩张、收入虚胖的风险"
+        },
+        {
+          "canonical_name": "存货同比增速",
+          "display_name": "存货同比增速",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "发展能力",
+          "weight": 4.0,
+          "weight_logic": "全产业链布局，存货波动直接影响盈利"
+        },
+        {
+          "canonical_name": "期间费用率",
+          "display_name": "期间费用率",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "多元化业务费用管控直接影响利润留存"
+        },
+        {
+          "canonical_name": "扣非 ROE",
+          "display_name": "扣非 ROE",
+          "aliases": [],
+          "metric_category": "通用",
+          "metric_type": "盈利能力",
+          "weight": 4.0,
+          "weight_logic": "股东综合回报指标"
+        },
+        {
+          "canonical_name": "有息负债 / 总资产",
+          "display_name": "有息负债 / 总资产",
+          "aliases": [
+            "有息负债",
+            "总资产"
+          ],
+          "metric_category": "通用",
+          "metric_type": "长期偿债能力",
+          "weight": 2.0,
+          "weight_logic": "全产业链扩产的刚性偿债压力，决定抗周期能力"
+        },
+        {
+          "canonical_name": "商誉 / 净资产比例",
+          "display_name": "商誉 / 净资产比例",
+          "aliases": [
+            "商誉",
+            "净资产比例"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 12.0,
+          "weight_logic": "跨界并购频繁，商誉是最大隐形雷区，占比过高代表减值风险极大"
+        },
+        {
+          "canonical_name": "关联交易 / 总营收比例",
+          "display_name": "关联交易 / 总营收比例",
+          "aliases": [
+            "关联交易",
+            "总营收比例"
+          ],
+          "metric_category": "特殊",
+          "metric_type": "盈利质量",
+          "weight": 9.0,
+          "weight_logic": "跨板块关联交易占比过高，存在利润转移、利益输送、报表美化的嫌疑"
+        },
+        {
+          "canonical_name": "分业务板块毛利率拆分",
+          "display_name": "分业务板块毛利率拆分",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 7.0,
+          "weight_logic": "拆分各板块盈利水平，判断核心利润来源与各板块经营健康度"
+        },
+        {
+          "canonical_name": "核心业务营收占比",
+          "display_name": "核心业务营收占比",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "发展能力",
+          "weight": 6.0,
+          "weight_logic": "拆分业务结构，判断企业核心赛道与战略定位"
+        },
+        {
+          "canonical_name": "管理费用率",
+          "display_name": "管理费用率",
+          "aliases": [],
+          "metric_category": "特殊",
+          "metric_type": "盈利能力",
+          "weight": 3.0,
+          "weight_logic": "映射管理效率，过高说明管理失序"
+        }
+      ]
+    }
+  }
+}
