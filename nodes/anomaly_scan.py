@@ -133,6 +133,7 @@ def anomaly_scan(
     _sector_code: Optional[str] = None,
     sub_sectors: Optional[List[str]] = None,
     kb: Any = None,
+    macro_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Scan for financial anomalies using rule engine.
 
@@ -143,6 +144,7 @@ def anomaly_scan(
         _sector_code: Current sector code.
         sub_sectors: Sub-sector codes for integrated.
         kb: LithiumKnowledgeBase instance.
+        macro_context: Optional macro data for external anomaly rules.
 
     Returns:
         Dict with:
@@ -192,7 +194,16 @@ def anomaly_scan(
         for code in set(codes_to_check):
             for rule in kb.get_anomaly_rules(code, include_external=True):
                 if rule.get("requires_external", False):
-                    skipped_external += 1
+                    if macro_context:
+                        try:
+                            if _evaluate_external_rule(rule, all_indicators, macro_context):
+                                signal = _build_kb_signal(rule, all_indicators)
+                                signal["_source"] = "external_macro"
+                                anomaly_signals.append(signal)
+                        except Exception:
+                            pass
+                    else:
+                        skipped_external += 1
                     continue
 
                 # Try to compile and evaluate the raw rule text
@@ -295,6 +306,43 @@ def _evaluate_kb_rule(rule: Dict, indicators: Dict[str, dict]) -> bool:
             return True
 
     return False
+
+
+def _evaluate_external_rule(
+    rule: Dict,
+    indicators: Dict[str, dict],
+    macro: Dict[str, Any],
+) -> bool:
+    """Evaluate an external-data-dependent anomaly rule using macro context."""
+    check = rule.get("check", "")
+    if not check:
+        return False
+
+    try:
+        ctx: Dict[str, Any] = {}
+        for name, ind in indicators.items():
+            val = ind.get("value") if isinstance(ind, dict) else ind
+            if val is not None:
+                safe_name = name.replace(" ", "_").replace("(", "").replace(")", "")
+                ctx[safe_name] = float(val)
+
+        trend = macro.get("trend", "")
+        change_3m_pct = macro.get("change_3m_pct", 0) or 0
+        ctx["external_lithium_price_drop"] = (
+            abs(change_3m_pct) if trend == "下跌" else 0.0
+        )
+        ctx["external_lithium_price_rise"] = (
+            change_3m_pct if trend == "上涨" else 0.0
+        )
+        ctx["lithium_price_change_3m"] = change_3m_pct
+        ctx["lithium_price_current"] = macro.get("current", 0) or 0
+        ctx["lithium_trend_up"] = 1 if trend == "上涨" else 0
+        ctx["lithium_trend_down"] = 1 if trend == "下跌" else 0
+
+        expr = check.replace("AND", " and ").replace("OR", " or ")
+        return bool(eval(expr, {"__builtins__": {}}, ctx))
+    except Exception:
+        return False
 
 
 def _build_kb_signal(rule: Dict, indicators: Dict[str, dict]) -> Dict:

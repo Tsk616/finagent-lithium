@@ -391,10 +391,8 @@ def _write_wind_cache(
 
 
 def _wind_live_calls_enabled() -> bool:
-    """Disable live Wind calls in automated tests unless explicitly requested."""
-    explicit = os.environ.get("WIND_LIVE_TEST") == "1" or os.environ.get("WIND_ENABLE_LIVE") == "1"
-    in_test = bool(os.environ.get("PYTEST_CURRENT_TEST"))
-    enabled = explicit or not in_test
+    """Allow live Wind calls only when explicitly requested."""
+    enabled = os.environ.get("WIND_LIVE_TEST") == "1" or os.environ.get("WIND_ENABLE_LIVE") == "1"
     _WIND_STATUS["live_calls_enabled"] = enabled
     return enabled
 
