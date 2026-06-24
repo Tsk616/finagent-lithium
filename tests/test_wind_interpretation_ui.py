@@ -131,10 +131,11 @@ def test_wind_financial_questions_are_short_and_bounded():
 
     questions = wind_adapter._build_fundamentals_questions("002594.SZ", "2025")
 
-    assert len(questions) == 2
+    assert len(questions) == 3
     assert all("002594.SZ" in q for q in questions)
     assert all(len(q) < 150 for q in questions)
     assert "营业收入营业成本研发费用" not in questions[0]
+    assert "期初净资产" in questions[2]
 
 
 def test_wind_financial_parser_handles_markdown_and_json_shapes():
@@ -202,21 +203,57 @@ def test_wind_financial_parser_handles_columnar_table_payload():
     assert round(parsed["净资产"] / 100000000, 2) == 2900.0
 
 
+def test_wind_financial_parser_maps_prior_period_columns():
+    """Prior-year Wind columns should feed growth and average-equity indicators."""
+    from nodes import wind_adapter
+
+    text = """
+{
+  "data": {
+    "columns": [
+      {"name": "2025年报营业收入", "unit": "亿元"},
+      {"name": "2024年报营业收入", "unit": "亿元"},
+      {"name": "2025年报应收账款", "unit": "亿元"},
+      {"name": "2024年报应收账款", "unit": "亿元"},
+      {"name": "2025年报存货", "unit": "亿元"},
+      {"name": "2024年报存货", "unit": "亿元"},
+      {"name": "2025年报净资产", "unit": "亿元"},
+      {"name": "2024年报净资产", "unit": "亿元"}
+    ],
+    "data": [[7771, 6023, 700, 650, 900, 800, 2900, 2500]]
+  }
+}
+"""
+
+    parsed = wind_adapter._parse_wind_financial_text(text, period_year=2025)
+
+    assert round(parsed["营业收入"] / 100000000, 2) == 7771.0
+    assert round(parsed["上期营业收入"] / 100000000, 2) == 6023.0
+    assert round(parsed["期初应收账款"] / 100000000, 2) == 650.0
+    assert round(parsed["期初存货"] / 100000000, 2) == 800.0
+    assert round(parsed["期初净资产"] / 100000000, 2) == 2500.0
+    assert round(parsed["期末净资产"] / 100000000, 2) == 2900.0
+
+
 def test_wind_fetch_financials_merges_bounded_mocked_calls():
-    """Two bounded Wind calls should merge financial statement and balance sheet data."""
+    """Bounded Wind calls should merge score-critical financial accounts."""
     from nodes import wind_adapter
 
     mocked = [
         {"content": [{"text": "| 科目 | 数值 |\n| --- | --- |\n| 营业收入 | 7771亿元 |\n| 营业成本 | 6300亿元 |\n| 净利润 | 402亿元 |"}]},
         {"content": [{"text": '{"data":[{"科目":"总资产","数值":"8000亿元"},{"科目":"总负债","数值":"5100亿元"},{"科目":"存货","数值":"900亿元"}]}'}]},
+        {"content": [{"text": '{"data":[{"科目":"上期营业收入","数值":"6023亿元"},{"科目":"期初净资产","数值":"2500亿元"},{"科目":"扣非净利润","数值":"360亿元"}]}'}]},
     ]
 
     with patch.object(wind_adapter, "_call_wind_cli", side_effect=mocked) as call_mock:
         result = wind_adapter._wind_fetch_financials("002594.SZ", "2025", timeout=1)
 
-    assert call_mock.call_count == 2
+    assert call_mock.call_count == 3
     assert result["营业收入"] is not None
     assert result["总资产"] is not None
+    assert result["上期营业收入"] is not None
+    assert result["期初净资产"] is not None
+    assert result["扣非净利润"] is not None
     assert result["毛利"] is not None
 
 
@@ -295,6 +332,9 @@ def test_template_data_exposes_grouped_metric_settings_and_insights():
     assert data["analysis_models"]["enabled"] == ["metric_interpretation"]
     assert data["metric_settings_groups"][0]["name"] == "profitability"
     assert data["metric_settings_groups"][0]["indicators"][0]["weight"] == 12
+    assert data["metric_blocks"][0]["name"] == "profitability"
+    assert data["metric_blocks"][0]["summary"]["available"] == 1
+    assert data["metric_blocks"][0]["core_indicators"][0]["name"] == "Gross Margin"
 
 
 def test_pipeline_exposes_interpretation_state_without_live_wind():
@@ -326,6 +366,8 @@ def test_report_template_contains_collapsible_settings_and_insight_sections():
 
     assert "metric-settings" in template
     assert "metric_settings_groups" in template
+    assert "metric_blocks" in template
+    assert "metric-block-grid" in template
     assert "metric_interpretations" in template
     assert "macro_insights" in template
     assert "industry_benchmark_insights" in template

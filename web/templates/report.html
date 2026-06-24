@@ -136,7 +136,47 @@
   </details>
   {% endif %}
 
-  <div class="indicator-grid">
+  {% if metric_blocks %}
+  <div class="metric-block-grid">
+    {% for block in metric_blocks %}
+    <details class="metric-block" {% if loop.first %}open{% endif %}>
+      <summary>
+        <span class="metric-block-title">{{ block.name }}</span>
+        <span class="metric-block-stats">
+          可计算 {{ block.summary.available }}/{{ block.summary.total }}
+          {% if block.summary.abnormal %} · 异常 {{ block.summary.abnormal }}{% endif %}
+          {% if block.summary.pending %} · 待补充 {{ block.summary.pending }}{% endif %}
+        </span>
+      </summary>
+      <div class="metric-block-core">
+        {% for ind in block.core_indicators %}
+        <div class="metric-core-pill risk-{{ ind.risk_color }}">
+          <span>{{ ind.display_name or ind.name }}</span>
+          <strong>{{ ind.value or "数据缺失" }}</strong>
+          <small>{{ ind.risk_level }}</small>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="metric-detail-list">
+        {% for ind in block.details %}
+        <div class="metric-detail-row risk-{{ ind.risk_color }}">
+          <div>
+            <strong>{{ ind.display_name or ind.name }}</strong>
+            <span>{{ ind.formula or ind.explanation or "暂无说明" }}</span>
+          </div>
+          <div class="metric-detail-value">{{ ind.value or "数据缺失" }}</div>
+          <div class="metric-detail-risk">{{ ind.risk_level }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <details class="raw-indicator-details">
+    <summary>查看通用指标明细</summary>
+    <div class="indicator-grid">
     {% for ind in general_computable %}
     <div class="ind-card risk-{{ ind.risk_color }}">
       <div class="ind-header">
@@ -160,7 +200,8 @@
       <div class="ind-explanation">{{ ind.explanation[:80] }}{% if ind.explanation|length > 80 %}...{% endif %}</div>
     </div>
     {% endfor %}
-  </div>
+    </div>
+  </details>
 
   {% if metric_interpretations %}
   <div class="insight-panel">
@@ -185,14 +226,14 @@
 
   <div class="sector-tabs">
     {% for tab in st.tabs %}
-    <div class="sector-tab-group">
-      <h3 class="tab-label">
+    <details class="sector-tab-group" {% if loop.first %}open{% endif %}>
+      <summary class="tab-label">
         {{ tab.name }}
         {% for ind in tab.indicators %}
           {% if ind.is_fatal %}<span class="badge-fatal">🔴生死</span>{% endif %}
           {% if ind.is_key %}<span class="badge-key">⭐先行</span>{% endif %}
         {% endfor %}
-      </h3>
+      </summary>
       <div class="sector-ind-list">
         {% for ind in tab.indicators %}
         <div class="sector-ind-item risk-{{ ind.risk_color }}">
@@ -210,7 +251,7 @@
         </div>
         {% endfor %}
       </div>
-    </div>
+    </details>
     {% endfor %}
   </div>
 </section>

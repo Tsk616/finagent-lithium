@@ -222,6 +222,120 @@ body {
 }
 .insight-item p { margin-top: 6px; color: var(--text-muted); font-size: 13px; line-height: 1.6; }
 
+.metric-block-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.metric-block,
+.raw-indicator-details {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.metric-block summary,
+.raw-indicator-details summary,
+.sector-tab-group summary {
+  cursor: pointer;
+}
+.metric-block summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.metric-block-title {
+  color: var(--text-heading);
+  font-weight: 700;
+}
+.metric-block-stats {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: right;
+}
+.metric-block-core {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+}
+.metric-core-pill {
+  min-height: 86px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  padding: 10px;
+}
+.metric-core-pill.risk-normal { border-left-color: var(--green-border); }
+.metric-core-pill.risk-warning { border-left-color: var(--yellow-border); }
+.metric-core-pill.risk-danger { border-left-color: var(--red-border); }
+.metric-core-pill.risk-pending { border-left-color: var(--gray-border); }
+.metric-core-pill span,
+.metric-core-pill small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.metric-core-pill strong {
+  display: block;
+  color: var(--text-heading);
+  font-size: 18px;
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+.metric-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.metric-detail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px 120px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+.metric-detail-row.risk-normal { border-left-color: var(--green-border); }
+.metric-detail-row.risk-warning { border-left-color: var(--yellow-border); }
+.metric-detail-row.risk-danger { border-left-color: var(--red-border); }
+.metric-detail-row.risk-pending { border-left-color: var(--gray-border); }
+.metric-detail-row strong,
+.metric-detail-row span {
+  display: block;
+}
+.metric-detail-row span {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.metric-detail-value {
+  color: var(--text-heading);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.metric-detail-risk {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.raw-indicator-details {
+  margin-top: 16px;
+}
+.raw-indicator-details summary {
+  color: var(--text-heading);
+  font-weight: 700;
+}
+.raw-indicator-details .indicator-grid {
+  margin-top: 14px;
+}
+
 /* ── Sector tabs ────────────────────────────────────────────────── */
 
 .sub-sector-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -237,15 +351,22 @@ body {
 .sub-tab:hover { background: #21262d; }
 .sub-tab.active { background: var(--blue-link); color: #fff; border-color: var(--blue-link); }
 
-.sector-tab-group { margin-bottom: 24px; }
+.sector-tab-group {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
 .tab-label {
   font-size: 16px;
   color: var(--text-heading);
-  margin-bottom: 12px;
+  margin-bottom: 0;
   display: flex;
   align-items: center;
   gap: 8px;
 }
+.sector-tab-group[open] .tab-label { margin-bottom: 12px; }
 
 .badge-fatal {
   font-size: 11px;
@@ -774,6 +895,10 @@ input:focus, textarea:focus { outline: none; border-color: var(--blue-link); }
   .side-card { padding: 18px; }
   .indicator-grid { grid-template-columns: 1fr; }
   .metric-setting-row { grid-template-columns: 1fr; }
+  .metric-block-grid { grid-template-columns: 1fr; }
+  .metric-block summary { align-items: flex-start; flex-direction: column; }
+  .metric-block-stats { text-align: left; }
+  .metric-detail-row { grid-template-columns: 1fr; }
   .form-row { flex-direction: column; }
   .report-header h1 { font-size: 22px; }
   .report-nav {

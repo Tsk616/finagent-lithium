@@ -257,6 +257,38 @@ def _build_template_data(state: dict) -> dict:
             for name, indicators in groups.items()
         ]
 
+    def build_metric_blocks(items: list) -> list:
+        blocks = []
+        for group in group_metric_settings(items):
+            indicators = group["indicators"]
+            if not indicators:
+                continue
+            abnormal = [
+                i for i in indicators
+                if i.get("risk_color") in ("warning", "danger")
+            ]
+            available = [i for i in indicators if not i.get("is_pending")]
+            sorted_core = sorted(
+                indicators,
+                key=lambda i: (
+                    0 if i.get("is_key") or i.get("is_fatal") else 1,
+                    -(i.get("weight") or 0),
+                    0 if not i.get("is_pending") else 1,
+                ),
+            )
+            blocks.append({
+                "name": group["name"],
+                "summary": {
+                    "total": len(indicators),
+                    "available": len(available),
+                    "abnormal": len(abnormal),
+                    "pending": len(indicators) - len(available),
+                },
+                "core_indicators": sorted_core[:4],
+                "details": indicators,
+            })
+        return blocks
+
     general_indicators = state.get("general_indicators", {})
     general_list = simplify_inds(general_indicators)
     computable = [i for i in general_list if not i["is_pending"]]
@@ -310,6 +342,7 @@ def _build_template_data(state: dict) -> dict:
         "weighted_score": state.get("weighted_score", {}),
         "metric_config_summary": state.get("metric_config_summary", {}),
         "metric_settings_groups": group_metric_settings(metric_settings_items),
+        "metric_blocks": build_metric_blocks(metric_settings_items),
         "metric_interpretations": state.get("metric_interpretations", []),
         "macro_context": state.get("macro_context", {}),
         "macro_insights": state.get("macro_insights", {}),

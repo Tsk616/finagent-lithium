@@ -225,6 +225,8 @@ _SINA_TO_CANONICAL: Dict[str, str] = {
 # Wind NL response term → canonical account name
 _WIND_TERM_TO_CANONICAL: Dict[str, str] = {
     "营业总收入": "营业收入", "营收": "营业收入", "营业收入": "营业收入",
+    "上期营业收入": "上期营业收入", "上年营业收入": "上期营业收入",
+    "去年营业收入": "上期营业收入", "上一年营业收入": "上期营业收入",
     "营业总成本": "营业总成本", "营业成本": "营业成本",
     "归属净利润": "归母净利润", "归属于母公司所有者的净利润": "归母净利润",
     "归母净利润": "归母净利润",
@@ -234,13 +236,19 @@ _WIND_TERM_TO_CANONICAL: Dict[str, str] = {
     "资产总额": "总资产", "资产总计": "总资产", "总资产": "总资产",
     "负债总额": "总负债", "负债合计": "总负债", "总负债": "总负债",
     "所有者权益": "净资产", "股东权益": "净资产", "净资产": "净资产",
+    "期初净资产": "期初净资产", "上期净资产": "期初净资产", "上年净资产": "期初净资产",
+    "期末净资产": "期末净资产",
     "归母净资产": "归母净资产", "归属于母公司股东权益": "归母净资产",
     "流动资产": "流动资产", "流动资产合计": "流动资产",
     "流动负债": "流动负债", "流动负债合计": "流动负债",
     "货币资金": "货币资金",
     "应收账款": "应收账款", "应收票据": "应收票据",
+    "期初应收账款": "期初应收账款", "上期应收账款": "期初应收账款",
+    "上年应收账款": "期初应收账款", "应收账款上期": "期初应收账款",
     "应收票据及应收账款": "应收票据及应收账款",
     "存货": "存货", "存货净额": "存货",
+    "期初存货": "期初存货", "上期存货": "期初存货",
+    "上年存货": "期初存货", "存货上期": "期初存货",
     "固定资产": "固定资产", "固定资产净额": "固定资产",
     "在建工程": "在建工程",
     "无形资产": "无形资产", "商誉": "商誉",
@@ -248,6 +256,7 @@ _WIND_TERM_TO_CANONICAL: Dict[str, str] = {
     "应付账款": "应付账款", "应付票据": "应付票据",
     "应付票据及应付账款": "应付票据及应付账款",
     "预收款项": "预收款项", "合同负债": "合同负债",
+    "预付款项": "预付款项",
     "长期应付款": "长期应付款",
     "交易性金融资产": "交易性金融资产",
     "其他应收款": "其他应收款",
@@ -688,7 +697,58 @@ _RE_DATE = re.compile(r"(\d{4}[-/年]\d{1,2}[-/月]\d{1,2})")
 _RE_YEAR = re.compile(r"(\d{4})年")
 
 
-def _parse_wind_financial_text(text: str) -> Dict[str, Optional[float]]:
+def _extract_period_year(period: str) -> Optional[int]:
+    """Extract the report year from a period label, e.g. 2025 or 2025年报."""
+    if not period:
+        return None
+    m = re.search(r"(\d{4})", str(period))
+    if not m:
+        return None
+    try:
+        return int(m.group(1))
+    except ValueError:
+        return None
+
+
+_PRIOR_PERIOD_ALIASES = {
+    "营业收入": "上期营业收入",
+    "营业成本": "上期营业成本",
+    "研发费用": "上期研发费用",
+    "净利润": "上期净利润",
+    "应收账款": "期初应收账款",
+    "应收票据及应收账款": "期初应收账款",
+    "存货": "期初存货",
+    "净资产": "期初净资产",
+    "总资产": "期初总资产",
+    "总负债": "期初总负债",
+    "流动资产": "期初流动资产",
+    "流动负债": "期初流动负债",
+    "固定资产": "期初固定资产",
+    "在建工程": "期初在建工程",
+    "短期借款": "期初短期借款",
+    "长期借款": "期初长期借款",
+    "合同负债": "期初合同负债",
+}
+
+_ENDING_PERIOD_ALIASES = {
+    "应收账款": "期末应收账款",
+    "应收票据及应收账款": "期末应收账款",
+    "存货": "期末存货",
+    "净资产": "期末净资产",
+    "总资产": "期末总资产",
+    "总负债": "期末总负债",
+    "流动资产": "期末流动资产",
+    "流动负债": "期末流动负债",
+    "固定资产": "期末固定资产",
+    "在建工程": "期末在建工程",
+    "合同负债": "期末合同负债",
+}
+
+
+def _parse_wind_financial_text(
+    text: str,
+    period_year: Optional[int] = None,
+) -> Dict[str, Optional[float]]:
     """Parse NL financial text from Wind into canonical account → value dict.
 
     Handles various Wind response formats:
@@ -698,6 +758,24 @@ def _parse_wind_financial_text(text: str) -> Dict[str, Optional[float]]:
     - Line-by-line key-value pairs
     """
     result: Dict[str, Optional[float]] = {}
+
+    def _period_aware_canonical(term: str, canonical: Optional[str]) -> Optional[str]:
+        if canonical is None:
+            return None
+        term_text = str(term)
+        if re.search(r"(上期|上年|上一年|去年|期初)", term_text):
+            return _PRIOR_PERIOD_ALIASES.get(canonical, canonical)
+        if "期末" in term_text:
+            return _ENDING_PERIOD_ALIASES.get(canonical, canonical)
+        if period_year is not None:
+            years = [int(y) for y in re.findall(r"(\d{4})年?", term_text)]
+            if years:
+                year = years[-1]
+                if year < period_year:
+                    return _PRIOR_PERIOD_ALIASES.get(canonical, canonical)
+                if year == period_year and canonical in _ENDING_PERIOD_ALIASES and "年报" in term_text:
+                    return canonical
+        return canonical
 
     def _resolve_financial_term(term: str) -> Optional[str]:
         term = str(term).strip()
@@ -716,7 +794,7 @@ def _parse_wind_financial_text(text: str) -> Dict[str, Optional[float]]:
                 if sina_term in term or term in sina_term:
                     canonical = canon
                     break
-        return canonical
+        return _period_aware_canonical(term, canonical)
 
     def _coerce_financial_value(value: Any, unit_hint: str = "") -> Optional[float]:
         if isinstance(value, (int, float)):
@@ -751,6 +829,15 @@ def _parse_wind_financial_text(text: str) -> Dict[str, Optional[float]]:
         coerced = _coerce_financial_value(value, unit_hint)
         if coerced is not None:
             result[canonical] = coerced
+
+    def _finalize_result() -> Dict[str, Optional[float]]:
+        for cur_key, end_key in _ENDING_PERIOD_ALIASES.items():
+            if cur_key in result and result[cur_key] is not None and end_key not in result:
+                result[end_key] = result[cur_key]
+        if "上期营业收入" in result and result["上期营业收入"] is not None:
+            result.setdefault("营业收入上期", result["上期营业收入"])
+            result.setdefault("上期营收", result["上期营业收入"])
+        return result
 
     def _walk_json(obj: Any) -> None:
         if isinstance(obj, dict):
@@ -807,7 +894,7 @@ def _parse_wind_financial_text(text: str) -> Dict[str, Optional[float]]:
         data = json.loads(text)
         _walk_json(data)
         if len(result) >= 3:
-            return result
+            return _finalize_result()
     except (json.JSONDecodeError, TypeError):
         pass
 
@@ -881,7 +968,7 @@ def _parse_wind_financial_text(text: str) -> Dict[str, Optional[float]]:
                 if canonical and canonical not in result:
                     result[canonical] = value
 
-    return result
+    return _finalize_result()
 
 
 def _parse_wind_company_info(text: str, windcode: str) -> Optional[Dict[str, Any]]:
@@ -1094,7 +1181,7 @@ def _build_fundamentals_questions(windcode: str, period: str) -> List[str]:
     """Build short NL questions for Wind get_stock_fundamentals.
 
     Wind performs better with concise natural-language prompts than with a long
-    concatenated account list. Keep this to at most two calls to protect quota.
+    concatenated account list. Keep this to at most three calls to protect quota.
     """
     label = _wind_period_label(period)
     return [
@@ -1105,7 +1192,12 @@ def _build_fundamentals_questions(windcode: str, period: str) -> List[str]:
         ),
         (
             f"请返回{windcode}{label}的总资产、总负债、净资产、流动资产、流动负债、"
-            "货币资金、应收账款、存货、固定资产、在建工程、短期借款、长期借款，"
+            "货币资金、应收账款、存货、预付款项、固定资产、在建工程、短期借款、长期借款，"
+            "按科目:数值列出"
+        ),
+        (
+            f"请返回{windcode}{label}及上一年同期的上期营业收入、期初应收账款、"
+            "期初存货、期初净资产、期末净资产、流动负债、扣非净利润，"
             "按科目:数值列出"
         ),
     ]
@@ -1121,6 +1213,7 @@ def _wind_fetch_financials(
 ) -> Optional[Dict[str, Optional[float]]]:
     """Fetch financials via Wind MCP. Returns canonical account dict or None on failure."""
     questions = _build_fundamentals_questions(windcode, period)
+    period_year = _extract_period_year(_wind_period_label(period))
     merged_result: Dict[str, Optional[float]] = {}
 
     for question in questions:
@@ -1137,7 +1230,7 @@ def _wind_fetch_financials(
             _WIND_STATUS["last_error"] = "Wind returned no financial text"
             continue
 
-        result = _parse_wind_financial_text(text)
+        result = _parse_wind_financial_text(text, period_year=period_year)
         if result:
             merged_result.update({k: v for k, v in result.items() if v is not None})
 
