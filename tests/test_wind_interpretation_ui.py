@@ -125,6 +125,61 @@ def test_wind_only_macro_context_does_not_fallback_to_akshare():
     assert ak_fetch.call_count == 0
 
 
+def test_wind_financial_questions_are_short_and_bounded():
+    """Financial fetching should use a small number of concise Wind questions."""
+    from nodes import wind_adapter
+
+    questions = wind_adapter._build_fundamentals_questions("002594.SZ", "2025")
+
+    assert len(questions) == 2
+    assert all("002594.SZ" in q for q in questions)
+    assert all(len(q) < 150 for q in questions)
+    assert "营业收入营业成本研发费用" not in questions[0]
+
+
+def test_wind_financial_parser_handles_markdown_and_json_shapes():
+    """Wind responses may arrive as markdown tables or nested JSON envelopes."""
+    from nodes import wind_adapter
+
+    table = """
+| 科目 | 数值 |
+| --- | --- |
+| 营业收入 | 7771.02亿元 |
+| 营业成本 | 6300.50亿元 |
+| 净利润 | 402.54亿元 |
+"""
+    parsed_table = wind_adapter._parse_wind_financial_text(table)
+
+    assert round(parsed_table["营业收入"] / 100000000, 2) == 7771.02
+    assert round(parsed_table["营业成本"] / 100000000, 2) == 6300.50
+    assert round(parsed_table["净利润"] / 100000000, 2) == 402.54
+
+    nested_json = '{"data":[{"科目":"总资产","数值":"8000亿元"},{"指标":"总负债","值":"5100亿元"},{"name":"存货","value":"900亿元"}]}'
+    parsed_json = wind_adapter._parse_wind_financial_text(nested_json)
+
+    assert round(parsed_json["总资产"] / 100000000, 2) == 8000.0
+    assert round(parsed_json["总负债"] / 100000000, 2) == 5100.0
+    assert round(parsed_json["存货"] / 100000000, 2) == 900.0
+
+
+def test_wind_fetch_financials_merges_bounded_mocked_calls():
+    """Two bounded Wind calls should merge financial statement and balance sheet data."""
+    from nodes import wind_adapter
+
+    mocked = [
+        {"content": [{"text": "| 科目 | 数值 |\n| --- | --- |\n| 营业收入 | 7771亿元 |\n| 营业成本 | 6300亿元 |\n| 净利润 | 402亿元 |"}]},
+        {"content": [{"text": '{"data":[{"科目":"总资产","数值":"8000亿元"},{"科目":"总负债","数值":"5100亿元"},{"科目":"存货","数值":"900亿元"}]}'}]},
+    ]
+
+    with patch.object(wind_adapter, "_call_wind_cli", side_effect=mocked) as call_mock:
+        result = wind_adapter._wind_fetch_financials("002594.SZ", "2025", timeout=1)
+
+    assert call_mock.call_count == 2
+    assert result["营业收入"] is not None
+    assert result["总资产"] is not None
+    assert result["毛利"] is not None
+
+
 def test_structured_interpretations_do_not_invent_missing_data():
     """Interpretations should be evidence-backed and explicit about missing data."""
     from nodes.interpretation import build_structured_interpretations

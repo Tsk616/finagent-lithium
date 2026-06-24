@@ -672,25 +672,97 @@ def _parse_wind_financial_text(text: str) -> Dict[str, Optional[float]]:
     """
     result: Dict[str, Optional[float]] = {}
 
+    def _resolve_financial_term(term: str) -> Optional[str]:
+        term = str(term).strip()
+        if not term:
+            return None
+        canonical = _WIND_TERM_TO_CANONICAL.get(term)
+        if canonical is None:
+            canonical = _ak_resolve_sina_account(term)
+        if canonical is None:
+            for wind_term, canon in _WIND_TERM_TO_CANONICAL.items():
+                if wind_term in term or term in wind_term:
+                    canonical = canon
+                    break
+        if canonical is None:
+            for sina_term, canon in _SINA_TO_CANONICAL.items():
+                if sina_term in term or term in sina_term:
+                    canonical = canon
+                    break
+        return canonical
+
+    def _coerce_financial_value(value: Any, unit_hint: str = "") -> Optional[float]:
+        if isinstance(value, (int, float)):
+            return float(value)
+        if value is None:
+            return None
+        raw = str(value).strip()
+        if not raw or raw in {"-", "--", "N/A", "None", "null"}:
+            return None
+        m = re.search(r"([+-]?\d[\d,.]*)", raw)
+        if not m:
+            return None
+        try:
+            number = float(m.group(1).replace(",", ""))
+        except ValueError:
+            return None
+        unit_text = unit_hint or raw
+        for unit, multiplier in _UNIT_MULTIPLIER.items():
+            if unit and unit in unit_text and unit not in {"%", "%%"}:
+                return number * multiplier
+        return number
+
+    def _merge_value(term: Any, value: Any, unit_hint: str = "") -> None:
+        canonical = _resolve_financial_term(str(term))
+        if canonical is None or canonical in result:
+            return
+        coerced = _coerce_financial_value(value, unit_hint)
+        if coerced is not None:
+            result[canonical] = coerced
+
+    def _walk_json(obj: Any) -> None:
+        if isinstance(obj, dict):
+            name = (
+                obj.get("科目") or obj.get("指标") or obj.get("项目") or obj.get("名称")
+                or obj.get("item") or obj.get("name") or obj.get("indicator")
+                or obj.get("field")
+            )
+            value = (
+                obj.get("数值") or obj.get("值") or obj.get("金额") or obj.get("本期")
+                or obj.get("value") or obj.get("data") or obj.get("amount")
+            )
+            unit = obj.get("单位") or obj.get("unit") or ""
+            if name is not None and value is not None:
+                _merge_value(name, value, str(unit))
+            for key, val in obj.items():
+                _merge_value(key, val)
+                _walk_json(val)
+        elif isinstance(obj, list):
+            for item in obj:
+                _walk_json(item)
+
     # Strategy 0: Try to parse as JSON first
     try:
         data = json.loads(text)
-        if isinstance(data, dict):
-            # Could be structured financial data
-            for key, value in data.items():
-                canonical = _WIND_TERM_TO_CANONICAL.get(key, key)
-                # Also try matching via _resolve_sina_account
-                ak_canonical = _ak_resolve_sina_account(key)
-                if ak_canonical:
-                    canonical = ak_canonical
-                try:
-                    result[canonical] = float(value)
-                except (ValueError, TypeError):
-                    pass
-            if len(result) >= 3:
-                return result
+        _walk_json(data)
+        if len(result) >= 3:
+            return result
     except (json.JSONDecodeError, TypeError):
         pass
+
+    # Strategy 0b: Markdown / pipe table rows, e.g. | 营业收入 | 7771.02亿元 |
+    for line in text.splitlines():
+        if "|" not in line:
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 2:
+            continue
+        if any(set(c) <= {"-", ":"} for c in cells):
+            continue
+        key = cells[0]
+        value = cells[1]
+        unit_hint = " ".join(cells[1:])
+        _merge_value(key, value, unit_hint)
 
     # Strategy 1: Regex line-by-line extraction
     # Remove commas from numbers (Chinese formatting)
@@ -712,24 +784,7 @@ def _parse_wind_financial_text(text: str) -> Dict[str, Optional[float]]:
         # but some tools report % as-is
         value = value * multiplier
 
-        # Map to canonical name
-        canonical = _WIND_TERM_TO_CANONICAL.get(term)
-        if canonical is None:
-            # Try Sina mapping as well
-            canonical = _ak_resolve_sina_account(term)
-        if canonical is None:
-            # Try fuzzy match
-            for wind_term, canon in _WIND_TERM_TO_CANONICAL.items():
-                if wind_term in term or term in wind_term:
-                    canonical = canon
-                    break
-        if canonical is None:
-            # Try Sina fuzzy
-            for sina_term, canon in _SINA_TO_CANONICAL.items():
-                if sina_term in term or term in sina_term:
-                    canonical = canon
-                    break
-
+        canonical = _resolve_financial_term(term)
         if canonical is None:
             continue
 
@@ -761,9 +816,7 @@ def _parse_wind_financial_text(text: str) -> Dict[str, Optional[float]]:
                     if unit in val_str and unit not in ("%", "%%", "元"):
                         value *= mult
                         break
-                canonical = _WIND_TERM_TO_CANONICAL.get(key)
-                if canonical is None:
-                    canonical = _ak_resolve_sina_account(key)
+                canonical = _resolve_financial_term(key)
                 if canonical and canonical not in result:
                     result[canonical] = value
 
@@ -967,46 +1020,49 @@ def _extract_timeseries(data: Any) -> tuple:
 
 # ── Wind API callers (private) ──────────────────────────────────────────────
 
-def _build_fundamentals_question(windcode: str, period: str) -> str:
-    """Build a NL question for Wind get_stock_fundamentals.
+def _wind_period_label(period: str) -> str:
+    """Normalize a report period for short Wind natural-language questions."""
+    if not period:
+        return "最新一期"
+    if re.match(r"^\d{4}$", period):
+        return f"{period}年报"
+    return period
 
-    The question field must NOT contain whitespace per Wind CLI validation.
+
+def _build_fundamentals_questions(windcode: str, period: str) -> List[str]:
+    """Build short NL questions for Wind get_stock_fundamentals.
+
+    Wind performs better with concise natural-language prompts than with a long
+    concatenated account list. Keep this to at most two calls to protect quota.
     """
-    # Convert period to Wind report type format
-    year = period[:4] if len(period) >= 4 else ""
-    report_type = period[4:] if len(period) > 4 else "年报"
+    label = _wind_period_label(period)
+    return [
+        (
+            f"请返回{windcode}{label}的营业收入、营业成本、净利润、归母净利润、"
+            "扣非净利润、研发费用、销售费用、管理费用、财务费用、经营活动现金流净额，"
+            "按科目:数值列出"
+        ),
+        (
+            f"请返回{windcode}{label}的总资产、总负债、净资产、流动资产、流动负债、"
+            "货币资金、应收账款、存货、固定资产、在建工程、短期借款、长期借款，"
+            "按科目:数值列出"
+        ),
+    ]
 
-    period_map = {
-        "年报": "年年度报告", "一季报": "年一季度报告",
-        "中报": "年半年度报告", "三季报": "年三季度报告",
-    }
-    report_label = period_map.get(report_type, "年年度报告")
 
-    # Compact account list (no spaces) — comprehensive set
-    accounts = (
-        "营业收入营业成本研发费用销售费用管理费用财务费用"
-        "投资收益营业利润利润总额所得税费用净利润归母净利润扣非净利润"
-        "总资产总负债净资产归母净资产流动资产流动负债"
-        "货币资金应收账款应收票据存货固定资产在建工程"
-        "无形资产商誉短期借款长期借款应付账款合同负债"
-        "经营活动现金流净额投资活动现金流净额筹资活动现金流净额"
-        "基本每股收益稀释每股收益"
-        "资产减值损失信用减值损失公允价值变动收益"
-        "营业税金及附加其他收益营业外收入营业外支出"
-    )
-    return f"{windcode}{year}{report_label}{accounts}"
+def _build_fundamentals_question(windcode: str, period: str) -> str:
+    """Backward-compatible single-question builder."""
+    return _build_fundamentals_questions(windcode, period)[0]
 
 
 def _wind_fetch_financials(
     windcode: str, period: str, timeout: int = 120
 ) -> Optional[Dict[str, Optional[float]]]:
     """Fetch financials via Wind MCP. Returns canonical account dict or None on failure."""
-    question = _build_fundamentals_question(windcode, period)
+    questions = _build_fundamentals_questions(windcode, period)
+    merged_result: Dict[str, Optional[float]] = {}
 
-    # Try once; page requests should return a report instead of spending quota on retries.
-    for attempt in range(1):
-        if attempt > 0:
-            time.sleep(2)
+    for question in questions:
         mcp_result = _call_wind_cli(
             "stock_data", "get_stock_fundamentals",
             {"question": question},
@@ -1017,22 +1073,26 @@ def _wind_fetch_financials(
 
         text = _extract_text_from_mcp_result(mcp_result)
         if not text:
+            _WIND_STATUS["last_error"] = "Wind returned no financial text"
             continue
 
         result = _parse_wind_financial_text(text)
-        if result and len(result) >= 3:
-            # Compute 毛利 if we have 营业收入 and 营业成本
-            if "营业收入" in result and "营业成本" in result:
-                rev = result["营业收入"]
-                cost = result["营业成本"]
-                if rev is not None and cost is not None and "毛利" not in result:
-                    result["毛利"] = rev - cost
-            return result
+        if result:
+            merged_result.update({k: v for k, v in result.items() if v is not None})
+        if len(merged_result) >= 8:
+            break
 
-        # If we got some data but very little, try once more
-        if result and len(result) > 0:
-            continue
+    if len(merged_result) >= 3:
+        # Compute 毛利 if we have 营业收入 and 营业成本
+        if "营业收入" in merged_result and "营业成本" in merged_result:
+            rev = merged_result["营业收入"]
+            cost = merged_result["营业成本"]
+            if rev is not None and cost is not None and "毛利" not in merged_result:
+                merged_result["毛利"] = rev - cost
+        _WIND_STATUS["last_error"] = None
+        return merged_result
 
+    _WIND_STATUS["last_error"] = "Wind financial response could not be parsed"
     return None
 
 
