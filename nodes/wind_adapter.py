@@ -40,6 +40,8 @@ _WIND_STATUS: Dict[str, Any] = {
     "live_calls_enabled": None,
     "api_key_configured": False,
     "last_error": None,
+    "last_tool": None,
+    "last_response_preview": None,
     "last_cache_hit": False,
     "daily_limit": None,
     "daily_used": None,
@@ -324,7 +326,6 @@ def _resolve_wind_skill_dir() -> Optional[str]:
             resolved = candidate
         if _valid_wind_skill_dir(resolved):
             _WIND_STATUS["skill_dir"] = str(resolved)
-            _WIND_STATUS["last_error"] = None
             return str(resolved)
 
     _WIND_STATUS["skill_dir"] = None
@@ -523,6 +524,8 @@ def _call_wind_cli(
     cached = _read_wind_cache(server_type, tool_name, params)
     if cached is not None:
         return cached
+    _WIND_STATUS["last_tool"] = f"{server_type}.{tool_name}"
+    _WIND_STATUS["last_response_preview"] = None
 
     if not _wind_live_calls_enabled():
         _WIND_STATUS["last_error"] = "Wind live calls disabled"
@@ -531,14 +534,17 @@ def _call_wind_cli(
 
     skill_dir = _resolve_wind_skill_dir()
     if not skill_dir:
+        _WIND_STATUS["last_error"] = "Wind skill directory not found"
         logger.warning("Wind MCP skill directory not found; using fallback data source")
         return None
 
     if not _wind_budget_allows_call():
+        _WIND_STATUS["last_error"] = "Wind daily point limit reached"
         logger.warning("Wind daily point limit reached; using fallback data source")
         return None
 
     if not _check_node_available():
+        _WIND_STATUS["last_error"] = "Node.js not available"
         return None
 
     params_json = json.dumps(params, ensure_ascii=False, separators=(",", ":"))
@@ -555,13 +561,16 @@ def _call_wind_cli(
             timeout=timeout,
         )
     except subprocess.TimeoutExpired:
+        _WIND_STATUS["last_error"] = f"Wind MCP CLI timeout after {timeout}s"
         logger.warning("Wind MCP CLI timeout (%s/%s after %ds)", server_type, tool_name, timeout)
         return None
     except FileNotFoundError:
         _node_available = False
+        _WIND_STATUS["last_error"] = "Node.js not found"
         logger.warning("Node.js not found — Wind MCP unavailable")
         return None
     except Exception as e:
+        _WIND_STATUS["last_error"] = f"Wind MCP CLI subprocess error: {e}"
         logger.warning("Wind MCP CLI subprocess error: %s", e)
         return None
 
@@ -572,15 +581,19 @@ def _call_wind_cli(
             "Wind MCP CLI crashed (exit %d) — Node.js libuv issue, falling back",
             result.returncode,
         )
+        _WIND_STATUS["last_error"] = f"Wind MCP CLI crashed: exit {result.returncode}"
         return None
 
     stdout = result.stdout.strip() if result.stdout else ""
+    stderr = result.stderr.strip() if result.stderr else ""
+    _WIND_STATUS["last_response_preview"] = (stdout or stderr)[:500]
 
     if result.returncode == 0:
         # Success: stdout is the MCP result or call wrapper
         try:
             data = json.loads(stdout)
         except json.JSONDecodeError:
+            _WIND_STATUS["last_error"] = "Wind CLI stdout was not valid JSON"
             logger.debug("Wind CLI stdout not valid JSON: %.200s", stdout)
             return None
 
@@ -598,18 +611,21 @@ def _call_wind_cli(
                 _write_wind_cache(server_type, tool_name, params, data)
                 return data
         logger.debug("Wind CLI returned unexpected shape: %.200s", stdout)
+        _WIND_STATUS["last_error"] = "Wind CLI returned unexpected shape"
         return None
     else:
         # Exit code 1: error envelope {ok: false, error: {code, agent_action}}
         try:
             envelope = json.loads(stdout)
         except json.JSONDecodeError:
+            _WIND_STATUS["last_error"] = f"Wind MCP error exit {result.returncode}: invalid JSON"
             logger.warning("Wind MCP error (exit %d): %.200s", result.returncode, stdout)
             return None
 
         error = envelope.get("error", {}) if isinstance(envelope, dict) else {}
         code = error.get("code", "UNKNOWN")
         agent_action = error.get("agent_action", "")
+        _WIND_STATUS["last_error"] = f"{code}: {agent_action[:200]}"
 
         # Choose log level: NO_RESULTS is expected sometimes, use DEBUG
         if code in ("NO_RESULTS",):
