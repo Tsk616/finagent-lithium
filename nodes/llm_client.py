@@ -52,9 +52,12 @@ def call_llm(
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {cfg['api_key']}",
         "anthropic-version": "2023-06-01",
     }
+    if "/anthropic" in str(cfg.get("base_url", "")):
+        headers["x-api-key"] = cfg["api_key"]
+    else:
+        headers["Authorization"] = f"Bearer {cfg['api_key']}"
 
     payload = {
         "model": cfg["model"],
@@ -78,7 +81,8 @@ def call_llm(
                 return block["text"]
         return None
     except Exception as e:
-        print(f"[LLM] API call failed: {e}")
+        status = getattr(getattr(e, "response", None), "status_code", None)
+        print(f"[LLM] API call failed: {e}; status={status}; url={url}")
         return None
 
 

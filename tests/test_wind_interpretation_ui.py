@@ -138,6 +138,44 @@ def test_wind_financial_questions_are_short_and_bounded():
     assert "期初净资产" in questions[2]
 
 
+def test_deepseek_anthropic_client_uses_x_api_key_header():
+    """DeepSeek Anthropic-compatible API expects x-api-key, not Bearer auth."""
+    from nodes import llm_client
+
+    calls = []
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"content": [{"type": "text", "text": "ok"}]}
+
+    class FakeRequests:
+        @staticmethod
+        def post(url, headers, json, timeout):
+            calls.append({"url": url, "headers": headers, "json": json, "timeout": timeout})
+            return FakeResponse()
+
+    with patch.dict(sys.modules, {"requests": FakeRequests}):
+        result = llm_client.call_llm(
+            "system",
+            "user",
+            config={
+                "api_key": "test-key",
+                "base_url": "https://api.deepseek.com/anthropic",
+                "model": "deepseek-v4-flash",
+                "max_tokens": 20,
+                "temperature": 0,
+                "timeout": 1,
+            },
+        )
+
+    assert result == "ok"
+    assert calls[0]["headers"]["x-api-key"] == "test-key"
+    assert "Authorization" not in calls[0]["headers"]
+
+
 def test_wind_financial_parser_handles_markdown_and_json_shapes():
     """Wind responses may arrive as markdown tables or nested JSON envelopes."""
     from nodes import wind_adapter
