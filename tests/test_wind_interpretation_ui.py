@@ -136,6 +136,37 @@ def test_wind_financial_questions_are_short_and_bounded():
     assert all(len(q) < 150 for q in questions)
     assert "营业收入营业成本研发费用" not in questions[0]
     assert "期初净资产" in questions[2]
+    assert "合同负债" in questions[1]
+    assert "期初在建工程" in questions[2]
+
+
+def test_integrated_completeness_normalizes_required_accounts():
+    """Completeness should compare canonical accounts, not raw KB aliases/fragments."""
+    from lithium_kb import LithiumKnowledgeBase
+    from nodes.validate_data import validate_data
+
+    kb = LithiumKnowledgeBase(Path("lithium_knowledge_base.json")).load()
+    wind_like_keys = [
+        "营业收入", "营业成本", "净利润", "扣非净利润", "研发费用", "销售费用",
+        "管理费用", "财务费用", "经营活动现金流净额", "总资产", "总负债",
+        "净资产", "流动资产", "流动负债", "应收账款", "存货", "固定资产",
+        "在建工程", "合同负债", "应付账款", "营业收入上期", "期初应收账款",
+        "期末应收账款", "期初存货", "期末存货", "期初净资产", "期末净资产",
+        "期初在建工程", "期末在建工程", "期初合同负债", "期末合同负债",
+    ]
+    data = {key: 1.0 for key in wind_like_keys}
+
+    result = validate_data(
+        data,
+        sector_level2="6.1 一体化/跨界企业",
+        sub_sectors=["3.1", "3.2", "3.3"],
+        kb=kb,
+    )
+
+    assert result["data_completeness"] > 0.8
+    assert "过去" not in result["missing_accounts"]
+    assert "存货周转率" not in result["missing_accounts"]
+    assert "上期营收" not in result["missing_accounts"]
 
 
 def test_deepseek_anthropic_client_uses_x_api_key_header():

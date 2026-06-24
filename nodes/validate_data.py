@@ -152,6 +152,34 @@ _BUILTIN_ACCOUNT_MAPPING: Dict[str, List[str]] = {
 }
 
 
+_REQUIRED_ACCOUNT_ALIASES: Dict[str, str] = {
+    "扣除非经常性损益净利润": "扣非净利润",
+    "当期扣非净利润": "扣非净利润",
+    "本期营收": "营业收入",
+    "总营收": "营业收入",
+    "个月营收": "营业收入",
+    "上期营收": "营业收入上期",
+    "期初应收": "期初应收账款",
+    "期末应收": "期末应收账款",
+    "销售": "销售费用",
+    "管理": "管理费用",
+    "财务": "财务费用",
+    "总存货": "存货",
+    "｜汇兑损益｜": "汇兑损益",
+}
+
+_DERIVED_INDICATOR_TOKENS: Set[str] = {
+    "存货周转率",
+    "存货周转天数",
+    "应收周转天数",
+    "应付周转天数",
+    "应收增速",
+    "营收增速",
+    "现金周转周期",
+    "过去",
+}
+
+
 # ── Numeric sanity checks ─────────────────────────────────────────────
 
 def _numeric_checks(financial_data: Dict[str, Optional[float]],
@@ -333,7 +361,7 @@ def validate_data(
     resolver = AccountResolver(kb)
 
     # ── Step 1: Collect required accounts ──
-    required_accounts = _collect_required_accounts(sector_level2, sub_sectors, kb)
+    raw_required_accounts = _collect_required_accounts(sector_level2, sub_sectors, kb)
 
     # ── Step 2: Resolve incoming account names ──
     all_input_data = {**financial_data, **notes_data}
@@ -344,11 +372,14 @@ def validate_data(
         if canonical is None:
             error_log.append(f"[未识别科目] '{raw_name}' — 无法匹配到标准科目，请检查科目名或补充别名。")
 
+    required_accounts = _normalize_required_accounts(raw_required_accounts, resolver)
+
     # ── Step 3: Check which required accounts are missing ──
     present_canonicals = set()
     for canonical in resolved_accounts.values():
         if canonical and not canonical.startswith("未识别科目"):
             present_canonicals.add(canonical)
+    _add_derived_present_accounts(present_canonicals)
 
     missing_accounts: List[str] = []
     for required in required_accounts:
@@ -388,6 +419,35 @@ def validate_data(
         "unrecognized_accounts": unrecognized,
         "data_completeness": completeness,
     }
+
+
+def _normalize_required_accounts(
+    accounts: Set[str],
+    resolver: AccountResolver,
+) -> Set[str]:
+    """Normalize required account labels before completeness comparison."""
+    normalized: Set[str] = set()
+    for account in accounts:
+        if not account or account in _DERIVED_INDICATOR_TOKENS:
+            continue
+        candidate = _REQUIRED_ACCOUNT_ALIASES.get(account, account)
+        canonical = resolver.resolve(candidate)
+        normalized.add(canonical or candidate)
+    return normalized
+
+
+def _add_derived_present_accounts(present: Set[str]) -> None:
+    """Mark average accounts present when their components are available."""
+    derivations = {
+        "平均净资产": ("期初净资产", "期末净资产", "净资产"),
+        "平均固定资产": ("期初固定资产", "期末固定资产", "固定资产"),
+        "平均应收账款": ("期初应收账款", "期末应收账款", "应收账款"),
+        "平均存货": ("期初存货", "期末存货", "存货"),
+    }
+    for derived, components in derivations.items():
+        begin_key, end_key, fallback_key = components
+        if (begin_key in present and end_key in present) or fallback_key in present:
+            present.add(derived)
 
 
 def _collect_required_accounts(
@@ -456,6 +516,7 @@ def _extract_accounts_from_formula(formula: str) -> List[str]:
     """
     if not formula:
         return []
+    formula = re.sub(r"过去\s*\d+\s*个月营收", "营业收入", formula)
     # Split on operators, numbers, punctuation, whitespace
     # Split on operators: include both regular hyphen U+002D and minus sign U+2212
     parts = re.split(r'[÷+\-−×*/()（）\d.%=\s\n;；，,、]+', formula)
@@ -469,6 +530,8 @@ def _extract_accounts_from_formula(formula: str) -> List[str]:
             # Filter out formula fragments that aren't account names
             if p not in ("乘以", "除以", "减去", "加上", "其中", "合计", "平均", "当期",
                          "上期", "本期", "期末", "期初", "余额", "平均值", "科目余额"):
+                if p in _DERIVED_INDICATOR_TOKENS:
+                    continue
                 tokens.append(p)
     return tokens
 
