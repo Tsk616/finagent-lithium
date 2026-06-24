@@ -114,9 +114,13 @@ def run_pipeline(
 
     # ── Wind data enrichment (optional, graceful degradation) ──
     # If stock code provided but financial data is sparse, try Wind.
+    state["_wind_fetch_attempted"] = False
+    state["_wind_enriched"] = False
+    state["_wind_accounts_count"] = 0
     if stock_code and (not financial_data or len(financial_data) < 5):
+        state["_wind_fetch_attempted"] = True
         try:
-            from nodes.wind_adapter import stock_code_to_windcode, fetch_financials
+            from nodes.wind_adapter import stock_code_to_windcode, fetch_financials, get_wind_status
             windcode = stock_code_to_windcode(stock_code)
             wind_data = fetch_financials(windcode, period=current_period or "最新一期")
             if wind_data:
@@ -125,8 +129,10 @@ def run_pipeline(
                 financial_data = merged
                 state["_wind_enriched"] = True
                 state["_wind_accounts_count"] = len(wind_data)
-        except Exception:
-            pass  # Graceful degradation — pipeline continues without Wind
+            else:
+                state["_wind_fetch_error"] = get_wind_status().get("last_error") or "Wind returned no financial data"
+        except Exception as exc:
+            state["_wind_fetch_error"] = str(exc)
 
     # Update state with possibly enriched financial_data
     state["financial_data"] = financial_data
@@ -138,6 +144,10 @@ def run_pipeline(
         sector_level2=state.get("sector_level2"),
         sub_sectors=state.get("sub_sectors"), kb=KB)
     state.update(validation)
+
+    effective_llm_config = llm_config
+    if not financial_data or state.get("data_completeness", 0) <= 0:
+        effective_llm_config = {**(llm_config or {}), "api_key": ""}
 
     # Node 3: calculate_general
     general = calculate_general(financial_data=financial_data, notes_data=notes_data)
@@ -223,7 +233,7 @@ def run_pipeline(
         sector_indicators=state["sector_indicators"],
         sector_characteristics=state.get("sector_characteristics"),
         analysis_focus=state.get("analysis_focus"), kb=KB,
-        llm_config=llm_config)
+        llm_config=effective_llm_config)
     state["linkage_diagnosis"] = linkage["linkage_diagnosis"]
 
     # Node 7: anomaly_scan (with macro context for external rules)
@@ -244,7 +254,7 @@ def run_pipeline(
         macro_context=state.get("macro_context", {}),
         industry_comparison=state.get("industry_comparison", {}),
         weighted_score=state.get("weighted_score"),
-        llm_config=llm_config,
+        llm_config=effective_llm_config,
     )
     state.update(interpretations)
 
@@ -270,7 +280,7 @@ def run_pipeline(
         macro_insights=state.get("macro_insights"),
         industry_benchmark_insights=state.get("industry_benchmark_insights"),
         risk_summary=state.get("risk_summary"),
-        llm_config=llm_config)
+        llm_config=effective_llm_config)
     state["report_markdown"] = report["report_markdown"]
 
     state["status"] = "completed"

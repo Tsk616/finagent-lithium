@@ -317,6 +317,8 @@ def _build_template_data(state: dict) -> dict:
         "analysis_models": state.get("analysis_models", {}),
         "risk_summary": state.get("risk_summary", {}),
         "wind_status": state.get("wind_status", {}),
+        "wind_fetch_attempted": state.get("_wind_fetch_attempted", False),
+        "wind_fetch_error": state.get("_wind_fetch_error", ""),
         "industry_comparison": state.get("industry_comparison", {}),
         "status": state.get("status", "unknown"),
         "wind_enriched": state.get("_wind_enriched", False),

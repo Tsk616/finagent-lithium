@@ -19,6 +19,7 @@ DEFAULT_CONFIG = {
     "model": os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-flash"),
     "max_tokens": 2048,
     "temperature": 0.3,
+    "timeout": int(os.environ.get("DEEPSEEK_TIMEOUT_SECONDS", "12")),
 }
 
 
@@ -68,7 +69,7 @@ def call_llm(
     url = f"{cfg['base_url'].rstrip('/')}/v1/messages"
 
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=60)
+        resp = requests.post(url, headers=headers, json=payload, timeout=cfg.get("timeout", 12))
         resp.raise_for_status()
         data = resp.json()
         # Anthropic Messages format: content[0].text
