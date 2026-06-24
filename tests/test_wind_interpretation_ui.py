@@ -207,6 +207,46 @@ def test_deepseek_anthropic_client_uses_x_api_key_header():
     assert "Authorization" not in calls[0]["headers"]
 
 
+def test_deepseek_openai_client_uses_chat_completions():
+    """Default DeepSeek API should use OpenAI-compatible chat completions."""
+    from nodes import llm_client
+
+    calls = []
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"choices": [{"message": {"content": "ok-chat"}}]}
+
+    class FakeRequests:
+        @staticmethod
+        def post(url, headers, json, timeout):
+            calls.append({"url": url, "headers": headers, "json": json, "timeout": timeout})
+            return FakeResponse()
+
+    with patch.dict(sys.modules, {"requests": FakeRequests}):
+        result = llm_client.call_llm(
+            "system",
+            "user",
+            config={
+                "api_key": "test-key",
+                "base_url": "https://api.deepseek.com",
+                "model": "deepseek-chat",
+                "max_tokens": 20,
+                "temperature": 0,
+                "timeout": 1,
+            },
+        )
+
+    assert result == "ok-chat"
+    assert calls[0]["url"] == "https://api.deepseek.com/chat/completions"
+    assert calls[0]["headers"]["Authorization"] == "Bearer test-key"
+    assert "x-api-key" not in calls[0]["headers"]
+    assert calls[0]["json"]["messages"][0]["role"] == "system"
+
+
 def test_wind_financial_parser_handles_markdown_and_json_shapes():
     """Wind responses may arrive as markdown tables or nested JSON envelopes."""
     from nodes import wind_adapter

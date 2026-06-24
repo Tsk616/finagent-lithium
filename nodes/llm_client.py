@@ -1,7 +1,8 @@
 """
 Shared LLM client for FinAgent-Lithium nodes that require LLM calls.
 
-Uses DeepSeek's Anthropic-compatible Messages API.
+Uses DeepSeek's OpenAI-compatible Chat Completions API by default, with
+Anthropic-compatible Messages API support kept for deployments that opt in.
 Configure via environment variables or direct parameters.
 """
 
@@ -15,8 +16,8 @@ from typing import Dict, List, Optional, Any
 
 DEFAULT_CONFIG = {
     "api_key": os.environ.get("DEEPSEEK_API_KEY", ""),
-    "base_url": os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/anthropic"),
-    "model": os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-flash"),
+    "base_url": os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+    "model": os.environ.get("DEEPSEEK_MODEL", "deepseek-chat"),
     "max_tokens": 2048,
     "temperature": 0.3,
     "timeout": int(os.environ.get("DEEPSEEK_TIMEOUT_SECONDS", "12")),
@@ -50,35 +51,48 @@ def call_llm(
     except ImportError:
         return _mock_response(system_prompt, user_message)
 
-    headers = {
-        "Content-Type": "application/json",
-        "anthropic-version": "2023-06-01",
-    }
-    if "/anthropic" in str(cfg.get("base_url", "")):
+    base_url = str(cfg.get("base_url", "")).rstrip("/")
+    is_anthropic = "/anthropic" in base_url
+    headers = {"Content-Type": "application/json"}
+    if is_anthropic:
+        headers["anthropic-version"] = "2023-06-01"
         headers["x-api-key"] = cfg["api_key"]
+        payload = {
+            "model": cfg["model"],
+            "max_tokens": cfg["max_tokens"],
+            "temperature": cfg["temperature"],
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_message}],
+        }
+        url = f"{base_url}/v1/messages"
     else:
         headers["Authorization"] = f"Bearer {cfg['api_key']}"
-
-    payload = {
-        "model": cfg["model"],
-        "max_tokens": cfg["max_tokens"],
-        "temperature": cfg["temperature"],
-        "system": system_prompt,
-        "messages": [
-            {"role": "user", "content": user_message}
-        ],
-    }
-
-    url = f"{cfg['base_url'].rstrip('/')}/v1/messages"
+        payload = {
+            "model": cfg["model"],
+            "max_tokens": cfg["max_tokens"],
+            "temperature": cfg["temperature"],
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+        }
+        url = f"{base_url}/chat/completions"
 
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=cfg.get("timeout", 12))
         resp.raise_for_status()
         data = resp.json()
-        # Anthropic Messages format: content[0].text
-        for block in data.get("content", []):
-            if block.get("type") == "text":
-                return block["text"]
+        if is_anthropic:
+            for block in data.get("content", []):
+                if block.get("type") == "text":
+                    return block["text"]
+        else:
+            choices = data.get("choices") or []
+            if choices:
+                message = choices[0].get("message") or {}
+                content = message.get("content")
+                if content:
+                    return content
         return None
     except Exception as e:
         status = getattr(getattr(e, "response", None), "status_code", None)
