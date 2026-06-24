@@ -23,6 +23,8 @@ services:
         value: "500"
       - key: WIND_CALL_POINT_COST
         value: "1"
+      - key: WIND_FINANCIAL_TIMEOUT_SECONDS
+        value: "12"
       - key: WIND_ENABLE_CONTEXT
         value: "0"
     plan: free

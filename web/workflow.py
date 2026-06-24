@@ -122,7 +122,8 @@ def run_pipeline(
         try:
             from nodes.wind_adapter import stock_code_to_windcode, fetch_financials, get_wind_status
             windcode = stock_code_to_windcode(stock_code)
-            wind_data = fetch_financials(windcode, period=current_period or "最新一期")
+            wind_timeout = int(os.environ.get("WIND_FINANCIAL_TIMEOUT_SECONDS", "12"))
+            wind_data = fetch_financials(windcode, period=current_period or "最新一期", timeout=wind_timeout)
             if wind_data:
                 # Merge: Wind data as base, user-provided data on top
                 merged = {**wind_data, **financial_data}

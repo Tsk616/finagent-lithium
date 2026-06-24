@@ -1119,7 +1119,8 @@ def _wind_fetch_financials(
         _WIND_STATUS["last_error"] = None
         return merged_result
 
-    _WIND_STATUS["last_error"] = "Wind financial response could not be parsed"
+    if not _WIND_STATUS.get("last_error"):
+        _WIND_STATUS["last_error"] = "Wind financial response could not be parsed"
     return None
 
 
@@ -1636,7 +1637,7 @@ def _ak_fetch_macro_context(timeout: int = 30) -> Optional[Dict[str, Any]]:
 def fetch_financials(
     windcode: str,
     period: str = "最新一期",
-    timeout: int = 6,
+    timeout: int = 12,
 ) -> Optional[Dict[str, Optional[float]]]:
     """Fetch key financial accounts for a given stock.
 
@@ -1653,7 +1654,7 @@ def fetch_financials(
     """
     # Phase 1: Wind MCP (primary)
     try:
-        result = _wind_fetch_financials(windcode, period, timeout=min(timeout, 8))
+        result = _wind_fetch_financials(windcode, period, timeout=min(timeout, 15))
         if result and len(result) >= 3:
             logger.info("Wind MCP: %d accounts for %s (%s)", len(result), windcode, period)
             return result
