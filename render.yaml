@@ -11,4 +11,14 @@ services:
         value: deepseek-v4-flash
       - key: DEEPSEEK_BASE_URL
         value: https://api.deepseek.com/anthropic
+      - key: WIND_API_KEY
+        sync: false
+      - key: WIND_ENABLE_LIVE
+        value: "1"
+      - key: WIND_DAILY_POINT_LIMIT
+        value: "500"
+      - key: WIND_CALL_POINT_COST
+        value: "1"
+      - key: WIND_ENABLE_CONTEXT
+        value: "0"
     plan: free
