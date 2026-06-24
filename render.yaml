@@ -13,6 +13,8 @@ services:
         value: https://api.deepseek.com/anthropic
       - key: WIND_API_KEY
         sync: false
+      - key: WIND_SKILL_DIR
+        value: .agents/skills/wind-mcp-skill
       - key: WIND_ENABLE_LIVE
         value: "1"
       - key: WIND_DAILY_POINT_LIMIT
