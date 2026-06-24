@@ -720,7 +720,12 @@ def _parse_wind_financial_text(text: str) -> Dict[str, Optional[float]]:
 
     def _coerce_financial_value(value: Any, unit_hint: str = "") -> Optional[float]:
         if isinstance(value, (int, float)):
-            return float(value)
+            number = float(value)
+            unit_text = unit_hint or ""
+            for unit, multiplier in _UNIT_MULTIPLIER.items():
+                if unit and unit in unit_text and unit not in {"%", "%%"}:
+                    return number * multiplier
+            return number
         if value is None:
             return None
         raw = str(value).strip()
@@ -749,6 +754,35 @@ def _parse_wind_financial_text(text: str) -> Dict[str, Optional[float]]:
 
     def _walk_json(obj: Any) -> None:
         if isinstance(obj, dict):
+            columns = obj.get("columns")
+            table_rows = obj.get("rows")
+            if table_rows is None:
+                table_rows = obj.get("data")
+            if isinstance(columns, list) and isinstance(table_rows, list):
+                column_meta = []
+                for column in columns:
+                    if isinstance(column, dict):
+                        column_meta.append((
+                            str(column.get("name") or column.get("title") or column.get("field") or ""),
+                            str(column.get("unit") or ""),
+                        ))
+                    else:
+                        column_meta.append((str(column), ""))
+                for row in table_rows:
+                    if isinstance(row, list):
+                        for idx, value in enumerate(row):
+                            if idx < len(column_meta):
+                                name, unit = column_meta[idx]
+                                _merge_value(name, value, unit)
+                    elif isinstance(row, dict):
+                        for name, value in row.items():
+                            unit = ""
+                            for col_name, col_unit in column_meta:
+                                if col_name == name:
+                                    unit = col_unit
+                                    break
+                            _merge_value(name, value, unit)
+
             name = (
                 obj.get("科目") or obj.get("指标") or obj.get("项目") or obj.get("名称")
                 or obj.get("item") or obj.get("name") or obj.get("indicator")

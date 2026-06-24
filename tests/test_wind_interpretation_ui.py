@@ -174,6 +174,34 @@ def test_wind_result_extractor_accepts_structured_payloads():
     assert round(parsed["营业收入"] / 100000000, 2) == 7771.0
 
 
+def test_wind_financial_parser_handles_columnar_table_payload():
+    """Wind may return tables as columns metadata plus row arrays."""
+    from nodes import wind_adapter
+
+    text = """
+{
+  "data": {
+    "data": [{
+      "columns": [
+        {"name": "Wind代码", "type": "string"},
+        {"name": "证券简称", "type": "string"},
+        {"name": "2025年报资产总计", "type": "number", "unit": "亿元"},
+        {"name": "2025年报负债合计", "type": "number", "unit": "亿元"},
+        {"name": "2025年报净资产", "type": "number", "unit": "亿元"}
+      ],
+      "data": [["002594.SZ", "比亚迪", 8000, 5100, 2900]]
+    }]
+  }
+}
+"""
+
+    parsed = wind_adapter._parse_wind_financial_text(text)
+
+    assert round(parsed["总资产"] / 100000000, 2) == 8000.0
+    assert round(parsed["总负债"] / 100000000, 2) == 5100.0
+    assert round(parsed["净资产"] / 100000000, 2) == 2900.0
+
+
 def test_wind_fetch_financials_merges_bounded_mocked_calls():
     """Two bounded Wind calls should merge financial statement and balance sheet data."""
     from nodes import wind_adapter
