@@ -648,7 +648,18 @@ def _extract_text_from_mcp_result(result: dict) -> Optional[str]:
         return None
     content = result.get("content")
     if isinstance(content, list) and len(content) > 0:
-        return content[0].get("text") if isinstance(content[0], dict) else None
+        first = content[0]
+        if isinstance(first, dict):
+            if first.get("text"):
+                return str(first.get("text"))
+            for key in ("json", "data", "value", "result"):
+                if key in first:
+                    return json.dumps(first[key], ensure_ascii=False)
+        return str(first)
+    for key in ("text", "data", "result", "rows", "table", "records"):
+        if key in result and result[key] is not None:
+            value = result[key]
+            return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
     return None
 
 

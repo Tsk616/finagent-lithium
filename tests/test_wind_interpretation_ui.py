@@ -162,6 +162,18 @@ def test_wind_financial_parser_handles_markdown_and_json_shapes():
     assert round(parsed_json["存货"] / 100000000, 2) == 900.0
 
 
+def test_wind_result_extractor_accepts_structured_payloads():
+    """Some Wind tools return structured data instead of content[0].text."""
+    from nodes import wind_adapter
+
+    payload = {"data": [{"科目": "营业收入", "数值": "7771亿元"}]}
+
+    extracted = wind_adapter._extract_text_from_mcp_result(payload)
+    parsed = wind_adapter._parse_wind_financial_text(extracted)
+
+    assert round(parsed["营业收入"] / 100000000, 2) == 7771.0
+
+
 def test_wind_fetch_financials_merges_bounded_mocked_calls():
     """Two bounded Wind calls should merge financial statement and balance sheet data."""
     from nodes import wind_adapter
