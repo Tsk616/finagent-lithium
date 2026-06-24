@@ -1140,8 +1140,6 @@ def _wind_fetch_financials(
         result = _parse_wind_financial_text(text)
         if result:
             merged_result.update({k: v for k, v in result.items() if v is not None})
-        if len(merged_result) >= 8:
-            break
 
     if len(merged_result) >= 3:
         # Compute 毛利 if we have 营业收入 and 营业成本
