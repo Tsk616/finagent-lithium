@@ -41,6 +41,41 @@ except Exception:
     KB = None
 
 
+_DEFAULT_PEER_WINDCODES = [
+    "300750.SZ",  # 宁德时代
+    "002594.SZ",  # 比亚迪
+    "300014.SZ",  # 亿纬锂能
+    "688005.SH",  # 容百科技
+    "002466.SZ",  # 天齐锂业
+]
+
+
+def _context_fetch_enabled(state: Dict[str, Any], financial_data: Dict[str, Any]) -> bool:
+    if os.environ.get("WIND_ENABLE_CONTEXT") != "1":
+        return False
+    if not financial_data:
+        return False
+    if state.get("data_completeness", 0) <= 0:
+        return False
+    return bool(state.get("wind_status", {}).get("live_calls_enabled", True))
+
+
+def _peer_windcodes_for_context(stock_code: str = "") -> List[str]:
+    raw = os.environ.get("WIND_PEER_CODES", "").strip()
+    if raw:
+        codes = [part.strip() for part in raw.split(",") if part.strip()]
+    else:
+        codes = list(_DEFAULT_PEER_WINDCODES)
+    current = ""
+    try:
+        from nodes.wind_adapter import stock_code_to_windcode
+        current = stock_code_to_windcode(stock_code) if stock_code else ""
+    except Exception:
+        current = ""
+    peers = [code for code in codes if code != current]
+    return peers
+
+
 def run_pipeline(
     company_name: str = "",
     stock_code: str = "",
@@ -180,18 +215,22 @@ def run_pipeline(
             get_lithium_price_trend, fetch_peers_financials, get_wind_status, stock_code_to_windcode,
         )
         state["wind_status"] = get_wind_status()
-        if (
-            state["wind_status"].get("live_calls_enabled", True)
-            and os.environ.get("WIND_ENABLE_CONTEXT") == "1"
-        ):
+        if _context_fetch_enabled(state, financial_data):
             # Lithium price trend for anomaly external rules
-            lithium_trend = get_lithium_price_trend(timeout=6)
+            context_timeout = int(os.environ.get("WIND_CONTEXT_TIMEOUT_SECONDS", "6"))
+            lithium_trend = get_lithium_price_trend(timeout=context_timeout)
             if lithium_trend:
                 state["_lithium_trend"] = lithium_trend
                 state["macro_context"] = {"lithium_trend": lithium_trend}
 
             # Peer financials for cross-section comparison
-            peers = fetch_peers_financials(max_peers=3, timeout=8)
+            peer_limit = int(os.environ.get("WIND_PEER_MAX", "2"))
+            peer_codes = _peer_windcodes_for_context(stock_code)
+            peers = fetch_peers_financials(
+                windcodes=peer_codes,
+                max_peers=peer_limit,
+                timeout=context_timeout,
+            )
             if peers:
                 # Tag the current company
                 current_wc = stock_code_to_windcode(stock_code) if stock_code else ""

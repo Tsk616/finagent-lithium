@@ -57,7 +57,9 @@
   <a href="#ch1-company">公司画像</a>
   <a href="#ch2-general">指标体检</a>
   <a href="#ch4-linkage">联动诊断</a>
+  {% if has_anomalies %}
   <a href="#ch5-anomaly">异常警报</a>
+  {% endif %}
   <a href="#ch5b-macro">宏观背景</a>
   <a href="#ch5c-peers">行业对标</a>
   <a href="#ch6-summary">总结</a>
@@ -290,10 +292,10 @@
 </section>
 
 <!-- ── Chapter 5: Anomaly alerts ── -->
+{% if has_anomalies %}
 <section class="chapter" id="ch5-anomaly">
   <h2 class="chapter-title">⚠️ 异常警报</h2>
 
-  {% if has_anomalies %}
   <div class="anomaly-list">
     {% for sig in anomaly_signals %}
     <div class="anomaly-card" style="--sev: {{ sig.severity }}">
@@ -314,10 +316,8 @@
     </div>
     {% endfor %}
   </div>
-  {% else %}
-  <div class="empty-state success">✅ 暂未发现明显异常信号</div>
-  {% endif %}
 </section>
+{% endif %}
 
   <!-- Macro context -->
   {% if lithium_trend or macro_insights %}

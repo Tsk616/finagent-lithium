@@ -481,6 +481,18 @@ def test_report_template_contains_collapsible_settings_and_insight_sections():
     assert "macro_insights" in template
     assert "industry_benchmark_insights" in template
     assert "<details" in template
+    assert "{% if has_anomalies %}" in template
+    assert "暂未发现明显异常信号" not in template
+
+
+def test_peer_context_uses_bounded_default_codes_and_excludes_current():
+    """Peer benchmark context should be bounded and should not benchmark against itself."""
+    from web.workflow import _peer_windcodes_for_context
+
+    peers = _peer_windcodes_for_context("002594")
+
+    assert "002594.SZ" not in peers
+    assert peers[:2] == ["300750.SZ", "300014.SZ"]
 
 
 if __name__ == "__main__":

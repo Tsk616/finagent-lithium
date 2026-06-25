@@ -26,5 +26,11 @@ services:
       - key: WIND_FINANCIAL_TIMEOUT_SECONDS
         value: "12"
       - key: WIND_ENABLE_CONTEXT
-        value: "0"
+        value: "1"
+      - key: WIND_CONTEXT_TIMEOUT_SECONDS
+        value: "6"
+      - key: WIND_PEER_MAX
+        value: "2"
+      - key: WIND_PEER_CODES
+        value: "300750.SZ,002594.SZ,300014.SZ,688005.SH,002466.SZ"
     plan: free
