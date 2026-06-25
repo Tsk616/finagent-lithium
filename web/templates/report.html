@@ -472,7 +472,9 @@
     {% elif skipped_external > 0 %}
     <p class="footer-warning">⚠️ 本报告暂未接入锂价、行业增速等外部市场数据，{{ skipped_external }} 条风险规则未启用。</p>
     {% endif %}
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">💬 追问功能免费，不消耗 API 额度</p>
     <p class="footer-disclaimer">本分析仅基于财务报表数据，不构成投资建议。</p>
+    <p style="margin-top:12px;"><a href="/" style="color:var(--blue-link);font-size:13px;">← 返回首页</a></p>
   </footer>
 
 <!-- ── Hidden report data for download ── -->
@@ -538,7 +540,12 @@ function switchSubSector(idx) {
   document.querySelectorAll('.sub-tab').forEach(function(el, i) {
     el.classList.toggle('active', i === idx);
   });
+  history.replaceState(null, '', '#sector-' + idx);
 }
+(function() {
+  var m = location.hash.match(/^#sector-(\d+)$/);
+  if (m) switchSubSector(parseInt(m[1], 10));
+})();
 {% endif %}
 </script>
 </body>
