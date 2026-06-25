@@ -6,7 +6,12 @@ Serves the report HTML page and provides API endpoints.
 """
 
 import json
+import os
 import sys
+import tempfile
+import time
+import uuid
+from collections import deque
 from pathlib import Path
 
 # Ensure project root on path
@@ -16,10 +21,15 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from flask import Flask, render_template, request, jsonify, Response
 from web.workflow import run_pipeline, KB
+from nodes.calculate_general import calculate_general, annotate_formulas
 from nodes.data_extractor import extract as extract_from_file
+from nodes.llm_client import call_llm
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024  # 32MB max upload
+
+_REPORT_HISTORY = deque(maxlen=20)
+_REPORT_STATES = {}
 
 
 # ── Routes ────────────────────────────────────────────────────────────
@@ -37,7 +47,7 @@ def health():
 @app.route("/")
 def index():
     """Landing page: data input form."""
-    return render_template("index.html")
+    return render_template("index.html", history_items=list(_REPORT_HISTORY))
 
 
 @app.route("/analyze", methods=["POST"])
@@ -115,13 +125,14 @@ def analyze():
         template_data = _build_template_data(state)
         if upload_msg:
             template_data["upload_msg"] = upload_msg
+        template_data["report_id"] = _save_report_state(state)
 
         return render_template("report.html", **template_data)
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return render_template("index.html", error=str(e))
+        return render_template("index.html", error=str(e), history_items=list(_REPORT_HISTORY))
 
 
 @app.route("/api/analyze", methods=["POST"])
@@ -138,6 +149,7 @@ def api_analyze():
             financial_data=payload.get("financial_data", {}),
             notes_data=payload.get("notes_data", {}),
         )
+        state["report_id"] = _save_report_state(state)
         return jsonify(state)
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -206,7 +218,275 @@ def demo():
         state["_wind_enriched"] = True
         state["_wind_accounts_count"] = wind_count
     template_data = _build_template_data(state)
+    template_data["report_id"] = _save_report_state(state)
     return render_template("report.html", **template_data)
+
+
+@app.route("/report/<report_id>")
+def view_report(report_id):
+    """Render a report from the in-memory recent history."""
+    state = _REPORT_STATES.get(report_id)
+    if not state:
+        return render_template("index.html", error="报告记录不存在或服务已重启。", history_items=list(_REPORT_HISTORY)), 404
+    template_data = _build_template_data(state)
+    template_data["report_id"] = report_id
+    return render_template("report.html", **template_data)
+
+
+@app.route("/api/history")
+def api_history():
+    """Return recent report history."""
+    return jsonify({"items": list(_REPORT_HISTORY)})
+
+
+@app.route("/api/ask", methods=["POST"])
+def api_ask():
+    """Answer a follow-up question based on a generated report."""
+    payload = request.get_json() or {}
+    report_id = payload.get("report_id", "")
+    question = str(payload.get("question", "")).strip()
+    if not question:
+        return jsonify({"status": "error", "message": "question is required"}), 400
+
+    state = _REPORT_STATES.get(report_id)
+    if not state:
+        return jsonify({"status": "error", "message": "report_id not found or expired"}), 404
+
+    answer = _answer_followup_question(state, question)
+    return jsonify({"status": "ok", "answer": answer})
+
+
+@app.route("/compare", methods=["POST"])
+def compare_peers():
+    """Compare multiple uploaded peer reports with a compact table and radar data."""
+    uploaded_files = [f for f in request.files.getlist("peer_files") if f and f.filename]
+    if len(uploaded_files) < 2:
+        return render_template(
+            "index.html",
+            error="同行对比至少需要上传 2 个同年份年报或财报文件。",
+            history_items=list(_REPORT_HISTORY),
+        ), 400
+
+    peer_rows = []
+    for file_obj in uploaded_files[:8]:
+        try:
+            financial_data = _extract_uploaded_file(file_obj)
+            peer_rows.append(_build_peer_compare_row(file_obj.filename, financial_data))
+        except Exception as exc:
+            peer_rows.append({
+                "company": Path(file_obj.filename).stem,
+                "error": str(exc),
+                "metrics": {},
+                "raw": {},
+            })
+
+    comparison = _build_peer_comparison(peer_rows)
+    return render_template("compare.html", comparison=comparison, peers=peer_rows)
+
+
+def _save_report_state(state: dict) -> str:
+    """Keep the latest reports available for history and follow-up Q&A."""
+    report_id = str(uuid.uuid4())[:12]
+    stored = dict(state)
+    stored["report_id"] = report_id
+    stored["generated_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    _REPORT_STATES[report_id] = stored
+
+    item = {
+        "report_id": report_id,
+        "company_name": stored.get("company_name") or "未命名公司",
+        "stock_code": stored.get("stock_code") or "",
+        "current_period": stored.get("current_period") or "",
+        "generated_at": stored["generated_at"],
+        "data_completeness": stored.get("data_completeness", 0),
+        "weighted_score": (stored.get("weighted_score") or {}).get("score"),
+        "sector": stored.get("sector_level2") or stored.get("sector_level1") or "",
+    }
+    _REPORT_HISTORY.appendleft(item)
+
+    active_ids = {row["report_id"] for row in _REPORT_HISTORY}
+    for old_id in list(_REPORT_STATES.keys()):
+        if old_id not in active_ids:
+            _REPORT_STATES.pop(old_id, None)
+    return report_id
+
+
+def _answer_followup_question(state: dict, question: str) -> str:
+    """Use report evidence for follow-up Q&A, with a conservative fallback."""
+    compact_state = {
+        "company_name": state.get("company_name"),
+        "stock_code": state.get("stock_code"),
+        "period": state.get("current_period"),
+        "sector": state.get("sector_level2"),
+        "data_completeness": state.get("data_completeness"),
+        "weighted_score": state.get("weighted_score"),
+        "risk_summary": state.get("risk_summary"),
+        "metric_interpretations": (state.get("metric_interpretations") or [])[:12],
+        "industry_benchmark_insights": state.get("industry_benchmark_insights"),
+        "macro_insights": state.get("macro_insights"),
+        "anomaly_signals": state.get("anomaly_signals") or [],
+    }
+    system_prompt = (
+        "You are FinAgent, a financial analysis assistant. Answer in Chinese. "
+        "Only use the supplied report data. If the data is insufficient, say so clearly. "
+        "Do not invent numbers, peers, macro data, or investment advice."
+    )
+    user_message = json.dumps(
+        {"question": question, "report_data": compact_state},
+        ensure_ascii=False,
+        default=str,
+    )
+    answer = call_llm(system_prompt, user_message)
+    if answer:
+        return answer.strip()
+    return _fallback_followup_answer(compact_state, question)
+
+
+def _fallback_followup_answer(compact_state: dict, question: str) -> str:
+    """Deterministic fallback when the LLM is unavailable."""
+    score = (compact_state.get("weighted_score") or {}).get("score")
+    risks = compact_state.get("risk_summary") or {}
+    anomalies = compact_state.get("anomaly_signals") or []
+    lines = [
+        f"基于当前报告回答：{compact_state.get('company_name') or '该公司'}"
+        f"（{compact_state.get('period') or '报告期未注明'}）。"
+    ]
+    if score is not None:
+        lines.append(f"综合评分为 {score}/100。")
+    if risks.get("summary"):
+        lines.append(str(risks["summary"]))
+    if anomalies:
+        lines.append(f"报告中检测到 {len(anomalies)} 条异常信号，应优先查看异常警报章节。")
+
+    matched = []
+    q = question.lower()
+    for item in compact_state.get("metric_interpretations") or []:
+        metric = str(item.get("metric", ""))
+        if metric and (metric.lower() in q or any(token in q for token in metric.lower().split())):
+            matched.append(item)
+    for item in matched[:3]:
+        lines.append(f"{item.get('metric')}：{item.get('interpretation')}")
+    if not matched:
+        lines.append("当前离线回答只能基于已生成的评分、异常和指标解读摘要；更细的归因需要 LLM 服务可用。")
+    return "\n".join(lines)
+
+
+def _extract_uploaded_file(file_obj) -> dict:
+    suffix = os.path.splitext(file_obj.filename)[1]
+    fd, tmp_path = tempfile.mkstemp(suffix=suffix)
+    os.close(fd)
+    try:
+        file_obj.save(tmp_path)
+        return extract_from_file(tmp_path)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+
+def _build_peer_compare_row(filename: str, financial_data: dict) -> dict:
+    general = annotate_formulas(calculate_general(financial_data=financial_data)["general_indicators"])
+    selected_metrics = [
+        "销售毛利率",
+        "扣非销售净利率",
+        "净利润现金含量",
+        "资产负债率",
+        "流动比率",
+        "速动比率",
+    ]
+    metrics = {}
+    for name in selected_metrics:
+        item = general.get(name)
+        if item:
+            metrics[name] = {
+                "value": item.get("value"),
+                "unit": item.get("unit", ""),
+                "risk_level": str(item.get("risk_level", "")),
+            }
+    return {
+        "company": Path(filename).stem,
+        "metrics": metrics,
+        "raw": {
+            "营业收入": financial_data.get("营业收入"),
+            "净利润": financial_data.get("净利润"),
+            "总资产": financial_data.get("总资产"),
+            "所有者权益": financial_data.get("所有者权益") or financial_data.get("股东权益合计"),
+        },
+        "error": "",
+    }
+
+
+def _build_peer_comparison(peer_rows: list) -> dict:
+    metric_names = []
+    for peer in peer_rows:
+        for name in peer.get("metrics", {}):
+            if name not in metric_names:
+                metric_names.append(name)
+
+    lower_better = {"资产负债率"}
+    table = []
+    for name in metric_names:
+        values = [
+            (peer["company"], peer["metrics"][name]["value"])
+            for peer in peer_rows
+            if peer.get("metrics", {}).get(name, {}).get("value") is not None
+        ]
+        best_company = worst_company = ""
+        if values:
+            ordered = sorted(values, key=lambda x: x[1], reverse=name not in lower_better)
+            best_company = ordered[0][0]
+            worst_company = ordered[-1][0]
+        table.append({
+            "metric": name,
+            "unit": next((peer["metrics"][name].get("unit", "") for peer in peer_rows if name in peer.get("metrics", {})), ""),
+            "best_company": best_company,
+            "worst_company": worst_company,
+            "values": [
+                {
+                    "company": peer["company"],
+                    "value": peer.get("metrics", {}).get(name, {}).get("value"),
+                    "risk_level": peer.get("metrics", {}).get(name, {}).get("risk_level", ""),
+                    "is_best": peer["company"] == best_company,
+                    "is_worst": peer["company"] == worst_company,
+                }
+                for peer in peer_rows
+            ],
+        })
+
+    radar = _build_peer_radar(peer_rows, metric_names[:6], lower_better)
+    return {
+        "metric_table": table,
+        "radar": radar,
+        "peer_count": len(peer_rows),
+        "available_metric_count": len(metric_names),
+    }
+
+
+def _build_peer_radar(peer_rows: list, metric_names: list, lower_better: set) -> list:
+    radar = []
+    for peer in peer_rows:
+        points = []
+        for name in metric_names:
+            values = [
+                p.get("metrics", {}).get(name, {}).get("value")
+                for p in peer_rows
+                if p.get("metrics", {}).get(name, {}).get("value") is not None
+            ]
+            value = peer.get("metrics", {}).get(name, {}).get("value")
+            if value is None or not values:
+                score = 0
+            else:
+                lo, hi = min(values), max(values)
+                if hi == lo:
+                    score = 70
+                else:
+                    score = (value - lo) / (hi - lo) * 100
+                    if name in lower_better:
+                        score = 100 - score
+            points.append({"metric": name, "score": round(score, 1)})
+        radar.append({"company": peer["company"], "points": points})
+    return radar
 
 
 # ── Template data builder ─────────────────────────────────────────────

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinAgent-Lithium 同行对比</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="report-container">
+  <header class="report-header">
+    <h1>同行对比 <span class="stock-code">{{ comparison.peer_count }} 家公司</span></h1>
+    <div class="report-meta">横向指标表 + 最优/最差标记 + 雷达评分数据</div>
+    <div class="header-actions">
+      <a class="btn-download" href="/">返回数据上传</a>
+    </div>
+  </header>
+
+  <section class="chapter">
+    <h2 class="chapter-title">横向对比表</h2>
+    {% if comparison.metric_table %}
+    <div class="compare-table-wrap">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>指标</th>
+            {% for peer in peers %}
+            <th>{{ peer.company }}</th>
+            {% endfor %}
+            <th>最优</th>
+            <th>最弱</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in comparison.metric_table %}
+          <tr>
+            <td>
+              <strong>{{ row.metric }}</strong>
+              {% if row.unit %}<span>{{ row.unit }}</span>{% endif %}
+            </td>
+            {% for cell in row.values %}
+            <td class="{% if cell.is_best %}best-cell{% elif cell.is_worst %}weak-cell{% endif %}">
+              {% if cell.value is not none %}{{ "%.2f"|format(cell.value) }}{% else %}-{% endif %}
+              {% if cell.risk_level %}<small>{{ cell.risk_level }}</small>{% endif %}
+            </td>
+            {% endfor %}
+            <td>{{ row.best_company or "-" }}</td>
+            <td>{{ row.worst_company or "-" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">上传文件中未能提取出可对比指标。</div>
+    {% endif %}
+  </section>
+
+  <section class="chapter">
+    <h2 class="chapter-title">雷达评分数据</h2>
+    <div class="radar-grid">
+      {% for peer in comparison.radar %}
+      <div class="radar-card">
+        <h3>{{ peer.company }}</h3>
+        {% for point in peer.points %}
+        <div class="radar-row">
+          <span>{{ point.metric }}</span>
+          <div class="radar-bar"><i style="width: {{ point.score }}%;"></i></div>
+          <strong>{{ point.score }}</strong>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="chapter">
+    <h2 class="chapter-title">数据说明</h2>
+    <div class="summary-box">
+      本页仅基于上传文件中实际提取到的财务科目计算，不补造缺失值。若某家公司指标为空，通常说明对应报表科目未被提取或文件格式不支持。
+    </div>
+  </section>
+</div>
+</body>
+</html>

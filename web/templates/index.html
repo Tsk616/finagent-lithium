@@ -36,6 +36,13 @@
       <a href="#benchmark-panel">行业对标</a>
       <a href="#workflow-panel">分析流程</a>
     </nav>
+    <nav class="app-nav app-nav-secondary" aria-label="新增功能导航">
+      <a href="#analysis-panel">数据上传</a>
+      <a href="#workflow-panel">分析报告</a>
+      <a href="#ask-panel">追问交互</a>
+      <a href="#peer-panel">同行对比</a>
+      <a href="#history-panel">历史记录</a>
+    </nav>
     <div class="sidebar-note">
       <strong>当前模式</strong>
       <span>Wind API 已支持环境变量接入，额度默认 500 积分/日；未配置或额度用尽时自动降级。</span>
@@ -148,6 +155,52 @@
             <span>行业位置</span>
             <span>高低判断</span>
           </div>
+        </section>
+        <section class="side-card" id="ask-panel">
+          <div class="section-heading compact">
+            <span class="eyebrow">Ask</span>
+            <h3>追问交互</h3>
+          </div>
+          <p class="muted-copy">生成报告后，可以围绕 ROE、营收增速、负债水平、同行差距和下一年财务策略继续追问。回答只基于当前报告数据，数据不足时会明确说明。</p>
+          <div class="mini-metrics">
+            <span>报告上下文</span>
+            <span>DeepSeek</span>
+            <span>不编造数据</span>
+          </div>
+        </section>
+
+        <section class="side-card" id="peer-panel">
+          <div class="section-heading compact">
+            <span class="eyebrow">Peer Compare</span>
+            <h3>同行对比</h3>
+          </div>
+          <form method="POST" action="/compare" enctype="multipart/form-data" class="peer-upload-form">
+            <label>上传多家公司同年份年报 / 财报文件
+              <input type="file" name="peer_files" accept=".xlsx,.xls,.pdf" multiple required>
+            </label>
+            <p class="muted-copy">至少 2 家，最多处理前 8 个文件。系统会生成横向指标表、最优/最差标记和雷达评分数据。</p>
+            <button type="submit" class="btn-secondary">开始同行对比</button>
+          </form>
+        </section>
+
+        <section class="side-card" id="history-panel">
+          <div class="section-heading compact">
+            <span class="eyebrow">History</span>
+            <h3>最近 20 条分析记录</h3>
+          </div>
+          {% if history_items %}
+          <div class="history-list">
+            {% for item in history_items %}
+            <a class="history-item" href="/report/{{ item.report_id }}">
+              <strong>{{ item.company_name }}</strong>
+              <span>{{ item.current_period or "报告期未注明" }} · 完整度 {{ "%.0f"|format(item.data_completeness * 100) }}%{% if item.weighted_score is not none %} · 评分 {{ item.weighted_score }}{% endif %}</span>
+              <small>{{ item.generated_at }}</small>
+            </a>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="muted-copy">当前服务启动后还没有生成报告。生成后的报告会自动保留最近 20 条，便于回看。</p>
+          {% endif %}
         </section>
       </aside>
     </section>

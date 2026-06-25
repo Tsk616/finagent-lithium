@@ -63,6 +63,7 @@
   <a href="#ch5b-macro">宏观背景</a>
   <a href="#ch5c-peers">行业对标</a>
   <a href="#ch6-summary">总结</a>
+  <a href="#ch7-ask">追问交互</a>
 </nav>
 
 <!-- ── Chapter 1: Company portrait ── -->
@@ -449,6 +450,21 @@
     </div>
   </section>
 
+  <section class="chapter" id="ch7-ask">
+    <h2 class="chapter-title">追问交互</h2>
+    <div class="ask-card">
+      <div class="ask-examples">
+        <button type="button" onclick="fillAsk('请重点解读 ROE 变化的原因')">ROE 原因</button>
+        <button type="button" onclick="fillAsk('营收增速放缓的主要原因是什么')">营收增速</button>
+        <button type="button" onclick="fillAsk('与同行业相比，公司的负债水平如何')">负债对标</button>
+        <button type="button" onclick="fillAsk('建议公司下一年的财务策略重点')">财务策略</button>
+      </div>
+      <textarea id="askQuestion" rows="3" placeholder="基于当前报告继续追问，例如：请解释综合评分被哪些指标拉低"></textarea>
+      <button type="button" class="btn-secondary" onclick="askReport()">提交追问</button>
+      <div id="askAnswer" class="ask-answer muted">回答会基于当前报告数据生成；数据不足时会明确说明。</div>
+    </div>
+  </section>
+
   <!-- Footer -->
   <footer class="report-footer">
     {% if lithium_trend %}
@@ -461,11 +477,41 @@
 
 <!-- ── Hidden report data for download ── -->
 <script id="report-markdown-data" type="text/markdown">{{ report_markdown | e }}</script>
+<script id="report-id-data" type="application/json">{{ report_id or "" }}</script>
 
 </div>
 {% endif %}
 
 <script>
+function fillAsk(text) {
+  var box = document.getElementById('askQuestion');
+  if (box) box.value = text;
+}
+
+function askReport() {
+  var box = document.getElementById('askQuestion');
+  var out = document.getElementById('askAnswer');
+  var ridNode = document.getElementById('report-id-data');
+  var question = box ? box.value.trim() : '';
+  var reportId = ridNode ? ridNode.textContent.trim() : '';
+  if (!question) {
+    out.textContent = '请先输入追问问题。';
+    return;
+  }
+  out.textContent = '正在生成回答...';
+  fetch('/api/ask', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({report_id: reportId, question: question})
+  }).then(function(resp) {
+    return resp.json();
+  }).then(function(data) {
+    out.textContent = data.answer || data.message || '未生成回答。';
+  }).catch(function(err) {
+    out.textContent = '追问失败：' + err;
+  });
+}
+
 function downloadMarkdown() {
   var md = document.getElementById('report-markdown-data').textContent;
   // Decode HTML entities

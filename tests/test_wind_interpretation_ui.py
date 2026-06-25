@@ -495,6 +495,59 @@ def test_peer_context_uses_bounded_default_codes_and_excludes_current():
     assert peers[:2] == ["300750.SZ", "300014.SZ"]
 
 
+def test_history_followup_and_peer_helpers_are_deterministic():
+    """History, follow-up fallback, and peer comparison should work without live APIs."""
+    import web.app as web_app
+
+    web_app._REPORT_HISTORY.clear()
+    web_app._REPORT_STATES.clear()
+    state = {
+        "company_name": "TestCo",
+        "stock_code": "000001",
+        "current_period": "2025",
+        "data_completeness": 0.8,
+        "weighted_score": {"score": 76.5},
+        "risk_summary": {"summary": "Weighted score is 76.5/100. No obvious anomaly signal was detected."},
+        "metric_interpretations": [
+            {"metric": "ROE", "interpretation": "ROE is 8.2%, based on calculated data."}
+        ],
+        "anomaly_signals": [],
+    }
+
+    report_id = web_app._save_report_state(state)
+    assert report_id in web_app._REPORT_STATES
+    assert len(web_app._REPORT_HISTORY) == 1
+
+    answer = web_app._fallback_followup_answer(web_app._REPORT_STATES[report_id], "请解释 ROE")
+    assert "76.5" in answer
+    assert "ROE" in answer
+
+    rows = [
+        {"company": "A", "metrics": {"资产负债率": {"value": 40, "unit": "%"}}},
+        {"company": "B", "metrics": {"资产负债率": {"value": 60, "unit": "%"}}},
+    ]
+    comparison = web_app._build_peer_comparison(rows)
+    assert comparison["available_metric_count"] == 1
+    assert comparison["metric_table"][0]["best_company"] == "A"
+    assert comparison["metric_table"][0]["worst_company"] == "B"
+
+
+def test_new_feature_templates_are_exposed():
+    """The uploaded feature spec requires ask, peer compare, and history UI entry points."""
+    index = Path("web/templates/index.html").read_text(encoding="utf-8")
+    report = Path("web/templates/report.html").read_text(encoding="utf-8")
+    compare = Path("web/templates/compare.html").read_text(encoding="utf-8")
+
+    assert "ask-panel" in index
+    assert "peer-panel" in index
+    assert "history-panel" in index
+    assert "/compare" in index
+    assert "api/ask" in report
+    assert "askQuestion" in report
+    assert "compare-table" in compare
+    assert "radar-grid" in compare
+
+
 if __name__ == "__main__":
     test_wind_skill_dir_prefers_env_path()
     test_wind_cli_disabled_by_default_in_tests()
@@ -505,3 +558,6 @@ if __name__ == "__main__":
     test_template_data_exposes_grouped_metric_settings_and_insights()
     test_pipeline_exposes_interpretation_state_without_live_wind()
     test_report_template_contains_collapsible_settings_and_insight_sections()
+    test_peer_context_uses_bounded_default_codes_and_excludes_current()
+    test_history_followup_and_peer_helpers_are_deterministic()
+    test_new_feature_templates_are_exposed()
