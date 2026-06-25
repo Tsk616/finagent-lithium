@@ -655,6 +655,12 @@ body {
   gap: 20px;
   align-items: start;
 }
+.feature-panel {
+  display: none;
+}
+.feature-panel.active {
+  display: block;
+}
 .analysis-card,
 .side-card {
   background: var(--bg-card);

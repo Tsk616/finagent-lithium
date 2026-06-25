@@ -548,6 +548,27 @@ def test_new_feature_templates_are_exposed():
     assert "radar-grid" in compare
 
 
+def test_feature_panels_and_pages_are_navigable():
+    """Each documented module should have a usable panel or page, not only a label."""
+    import web.app as web_app
+
+    client = web_app.app.test_client()
+    home = client.get("/")
+    assert home.status_code == 200
+    body = home.get_data(as_text=True)
+    assert 'data-panel="upload"' in body
+    assert 'data-panel="report"' in body
+    assert 'data-panel="ask"' in body
+    assert 'data-panel="peer"' in body
+    assert 'data-panel="history"' in body
+    assert 'id="panel-upload"' in body
+    assert 'id="panel-ask"' in body
+    assert 'id="panel-history"' in body
+
+    assert client.get("/history").status_code == 200
+    assert client.get("/ask").status_code == 200
+
+
 if __name__ == "__main__":
     test_wind_skill_dir_prefers_env_path()
     test_wind_cli_disabled_by_default_in_tests()
@@ -561,3 +582,4 @@ if __name__ == "__main__":
     test_peer_context_uses_bounded_default_codes_and_excludes_current()
     test_history_followup_and_peer_helpers_are_deterministic()
     test_new_feature_templates_are_exposed()
+    test_feature_panels_and_pages_are_navigable()

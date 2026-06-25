@@ -47,7 +47,19 @@ def health():
 @app.route("/")
 def index():
     """Landing page: data input form."""
-    return render_template("index.html", history_items=list(_REPORT_HISTORY))
+    return render_template("index.html", history_items=list(_REPORT_HISTORY), initial_panel="upload")
+
+
+@app.route("/history")
+def history_page():
+    """Open the history module."""
+    return render_template("index.html", history_items=list(_REPORT_HISTORY), initial_panel="history")
+
+
+@app.route("/ask")
+def ask_page():
+    """Open the follow-up Q&A module."""
+    return render_template("index.html", history_items=list(_REPORT_HISTORY), initial_panel="ask")
 
 
 @app.route("/analyze", methods=["POST"])

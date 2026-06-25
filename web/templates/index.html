@@ -6,7 +6,7 @@
 <title>FinAgent-Lithium</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="workbench-body">
+<body class="workbench-body" data-initial-panel="{{ initial_panel or 'upload' }}">
 
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
@@ -31,21 +31,15 @@
       </div>
     </div>
     <nav class="app-nav" aria-label="功能导航">
-      <a class="active" href="#analysis-panel">财报分析</a>
-      <a href="#data-guide">数据说明</a>
-      <a href="#benchmark-panel">行业对标</a>
-      <a href="#workflow-panel">分析流程</a>
-    </nav>
-    <nav class="app-nav app-nav-secondary" aria-label="新增功能导航">
-      <a href="#analysis-panel">数据上传</a>
-      <a href="#workflow-panel">分析报告</a>
-      <a href="#ask-panel">追问交互</a>
-      <a href="#peer-panel">同行对比</a>
-      <a href="#history-panel">历史记录</a>
+      <a href="#panel-upload" data-panel="upload">数据上传</a>
+      <a href="#panel-report" data-panel="report">分析报告</a>
+      <a href="#panel-ask" data-panel="ask">追问交互</a>
+      <a href="#panel-peer" data-panel="peer">同行对比</a>
+      <a href="#panel-history" data-panel="history">历史记录</a>
     </nav>
     <div class="sidebar-note">
       <strong>当前模式</strong>
-      <span>Wind API 已支持环境变量接入，额度默认 500 积分/日；未配置或额度用尽时自动降级。</span>
+      <span>Wind API 支持额度保护和缓存；追问和历史回看不会触发 Wind 调用。</span>
     </div>
   </aside>
 
@@ -53,23 +47,23 @@
     <header class="app-topbar">
       <div>
         <span class="eyebrow">Multi-Agent Financial Analysis</span>
-        <h2>把财报文件转成可解释的指标、风险和对标结论</h2>
+        <h2>把财报文件转成可解释的指标、风险、评分和同行对标结论</h2>
       </div>
       <div class="status-pills" aria-label="系统状态">
         <span>Flask</span>
-        <span>DeepSeek fallback</span>
+        <span>DeepSeek</span>
         <span>Render ready</span>
       </div>
     </header>
 
     {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 
-    <section class="workspace-grid" id="analysis-panel">
+    <section class="feature-panel" id="panel-upload" data-feature-panel="upload">
       <form method="POST" action="/analyze" enctype="multipart/form-data" id="analysisForm" class="analysis-card" onsubmit="startLoading()">
         <div class="section-heading">
           <div>
-            <span class="eyebrow">Step 1</span>
-            <h3>上传财报或录入核心数据</h3>
+            <span class="eyebrow">Data Upload</span>
+            <h3>上传年报或录入核心财务数据</h3>
           </div>
           <a class="text-link" href="/demo">查看宁德时代 Demo</a>
         </div>
@@ -78,14 +72,14 @@
           <div class="upload-icon">PDF / XLSX</div>
           <div class="upload-text">
             <strong>拖拽 Excel 或 PDF 文件到这里</strong>
-            <span class="hint">支持 .xlsx、.xls、.pdf。文件仅用于本次分析，解析后会删除临时文件。</span>
+            <span class="hint">支持 .xlsx、.xls、.pdf。文件只用于本次分析，解析后会删除临时文件。</span>
           </div>
           <input type="file" name="file" id="fileInput" accept=".xlsx,.xls,.pdf" onchange="onFileSelected(this)">
           <button type="button" class="btn-upload" onclick="document.getElementById('fileInput').click()">选择文件</button>
           <div id="fileName" class="file-name"></div>
         </div>
 
-        <div class="divider"><span>或手动补充分析条件</span></div>
+        <div class="divider"><span>或手动补充分分析条件</span></div>
 
         <div class="form-row">
           <label>公司名称 <input name="company_name" placeholder="宁德时代"></label>
@@ -105,104 +99,120 @@
 
         <button type="submit" class="btn-primary" id="submitBtn">开始分析</button>
       </form>
+    </section>
 
-      <aside class="context-panel">
-        <section class="side-card" id="workflow-panel">
+    <section class="feature-panel" id="panel-report" data-feature-panel="report">
+      <div class="workspace-grid">
+        <section class="side-card">
           <div class="section-heading compact">
-            <span class="eyebrow">Pipeline</span>
-            <h3>7 步分析链路</h3>
-          </div>
-          <ol class="workflow-list">
-            <li>解析上传文件或 JSON 输入</li>
-            <li>识别锂电产业链赛道</li>
-            <li>计算通用财务指标</li>
-            <li>计算分行业指标和权重评分</li>
-            <li>扫描异常与联动风险</li>
-            <li>生成宏观背景与行业对标</li>
-            <li>输出可下载报告</li>
-          </ol>
-        </section>
-
-        <section class="side-card" id="data-guide">
-          <div class="section-heading compact">
-            <span class="eyebrow">Data</span>
-            <h3>数据说明</h3>
+            <span class="eyebrow">Report</span>
+            <h3>分析报告包含</h3>
           </div>
           <div class="guide-list">
-            <div>
-              <strong>推荐格式</strong>
-              <span>优先上传 Excel，字段识别更稳定；PDF 适合文本型年报。</span>
-            </div>
-            <div>
-              <strong>缺失指标</strong>
-              <span>缺失项会显示为空状态，综合评分按可用权重归一化。</span>
-            </div>
-            <div>
-              <strong>行业数据</strong>
-              <span>没有 Wind、缓存或同行数据时，不生成伪造对标结论。</span>
-            </div>
+            <div><strong>关键财务比率卡片</strong><span>展示 6 项核心比率，并按权重进入综合评分。</span></div>
+            <div><strong>趋势与风险评估</strong><span>包含 CAGR、风险等级、具体风险项和应对建议。</span></div>
+            <div><strong>AI 战略洞察</strong><span>由模型结合实际指标、异常、宏观和对标数据生成。</span></div>
+            <div><strong>完整 Markdown 报告</strong><span>报告页支持复制和下载 MD 文件。</span></div>
           </div>
         </section>
-
-        <section class="side-card" id="benchmark-panel">
+        <section class="side-card">
           <div class="section-heading compact">
-            <span class="eyebrow">Benchmark</span>
-            <h3>行业对标准备</h3>
+            <span class="eyebrow">Quick Start</span>
+            <h3>开始查看报告</h3>
           </div>
-          <p class="muted-copy">当前版本会优先使用 Wind、缓存或已上传同行财务数据。Wind 调用会先查缓存，并受每日 500 积分额度保护。</p>
-          <div class="mini-metrics">
-            <span>同行均值</span>
-            <span>行业位置</span>
-            <span>高低判断</span>
-          </div>
+          <p class="muted-copy">如果还没有上传文件，可以先使用 Demo 验证报告页、评分、异常、宏观和行业对标模块。</p>
+          <a class="btn-secondary" href="/demo">打开 Demo 报告</a>
         </section>
-        <section class="side-card" id="ask-panel">
+      </div>
+    </section>
+
+    <section class="feature-panel" id="panel-ask" data-feature-panel="ask" data-legacy-id="ask-panel">
+      <div class="workspace-grid">
+        <section class="analysis-card">
           <div class="section-heading compact">
             <span class="eyebrow">Ask</span>
-            <h3>追问交互</h3>
+            <h3>基于报告继续追问</h3>
           </div>
-          <p class="muted-copy">生成报告后，可以围绕 ROE、营收增速、负债水平、同行差距和下一年财务策略继续追问。回答只基于当前报告数据，数据不足时会明确说明。</p>
-          <div class="mini-metrics">
-            <span>报告上下文</span>
-            <span>DeepSeek</span>
-            <span>不编造数据</span>
+          <label>选择最近报告
+            <select id="askReportId">
+              <option value="">请选择已生成报告</option>
+              {% for item in history_items %}
+              <option value="{{ item.report_id }}">{{ item.company_name }} · {{ item.current_period or "报告期未注明" }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <div class="ask-examples">
+            <button type="button" onclick="fillWorkbenchAsk('请重点解读 ROE 变化的原因')">ROE 原因</button>
+            <button type="button" onclick="fillWorkbenchAsk('营收增速放缓的主要原因是什么')">营收增速</button>
+            <button type="button" onclick="fillWorkbenchAsk('与同行业相比，公司的负债水平如何')">负债对标</button>
+            <button type="button" onclick="fillWorkbenchAsk('建议公司下一年的财务策略重点')">财务策略</button>
           </div>
+          <textarea id="workbenchAskQuestion" rows="4" placeholder="请输入追问问题"></textarea>
+          <button type="button" class="btn-primary" onclick="askFromWorkbench()">提交追问</button>
+          <div id="workbenchAskAnswer" class="ask-answer muted">生成报告后，这里会基于报告上下文回答追问。</div>
         </section>
+        <section class="side-card">
+          <div class="section-heading compact">
+            <span class="eyebrow">Boundary</span>
+            <h3>回答边界</h3>
+          </div>
+          <p class="muted-copy">追问只使用当前报告中的指标、评分、异常、宏观和对标数据；没有证据的数据不会编造。</p>
+        </section>
+      </div>
+    </section>
 
-        <section class="side-card" id="peer-panel">
+    <section class="feature-panel" id="panel-peer" data-feature-panel="peer" data-legacy-id="peer-panel">
+      <div class="workspace-grid">
+        <section class="analysis-card">
           <div class="section-heading compact">
             <span class="eyebrow">Peer Compare</span>
-            <h3>同行对比</h3>
+            <h3>上传多家公司同年份年报</h3>
           </div>
           <form method="POST" action="/compare" enctype="multipart/form-data" class="peer-upload-form">
-            <label>上传多家公司同年份年报 / 财报文件
+            <label>同行公司年报 / 财报文件
               <input type="file" name="peer_files" accept=".xlsx,.xls,.pdf" multiple required>
             </label>
             <p class="muted-copy">至少 2 家，最多处理前 8 个文件。系统会生成横向指标表、最优/最差标记和雷达评分数据。</p>
-            <button type="submit" class="btn-secondary">开始同行对比</button>
+            <button type="submit" class="btn-primary">开始同行对比</button>
           </form>
         </section>
-
-        <section class="side-card" id="history-panel">
+        <section class="side-card">
           <div class="section-heading compact">
+            <span class="eyebrow">Compare</span>
+            <h3>对比内容</h3>
+          </div>
+          <div class="mini-metrics">
+            <span>横向指标表</span>
+            <span>最优/最差</span>
+            <span>雷达评分</span>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="feature-panel" id="panel-history" data-feature-panel="history" data-legacy-id="history-panel">
+      <section class="analysis-card">
+        <div class="section-heading">
+          <div>
             <span class="eyebrow">History</span>
             <h3>最近 20 条分析记录</h3>
           </div>
-          {% if history_items %}
-          <div class="history-list">
-            {% for item in history_items %}
-            <a class="history-item" href="/report/{{ item.report_id }}">
-              <strong>{{ item.company_name }}</strong>
-              <span>{{ item.current_period or "报告期未注明" }} · 完整度 {{ "%.0f"|format(item.data_completeness * 100) }}%{% if item.weighted_score is not none %} · 评分 {{ item.weighted_score }}{% endif %}</span>
-              <small>{{ item.generated_at }}</small>
-            </a>
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="muted-copy">当前服务启动后还没有生成报告。生成后的报告会自动保留最近 20 条，便于回看。</p>
-          {% endif %}
-        </section>
-      </aside>
+          <a class="text-link" href="/">刷新列表</a>
+        </div>
+        {% if history_items %}
+        <div class="history-list">
+          {% for item in history_items %}
+          <a class="history-item" href="/report/{{ item.report_id }}">
+            <strong>{{ item.company_name }}</strong>
+            <span>{{ item.current_period or "报告期未注明" }} · 完整度 {{ "%.0f"|format(item.data_completeness * 100) }}%{% if item.weighted_score is not none %} · 评分 {{ item.weighted_score }}{% endif %}</span>
+            <small>{{ item.generated_at }}{% if item.sector %} · {{ item.sector }}{% endif %}</small>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">当前服务启动后还没有生成报告。生成后的报告会自动保留最近 20 条，便于回看和追问。</div>
+        {% endif %}
+      </section>
     </section>
   </main>
 </div>
@@ -212,29 +222,46 @@ var dropZone = document.getElementById('dropZone');
 var fileInput = document.getElementById('fileInput');
 var fileName = document.getElementById('fileName');
 
-dropZone.addEventListener('click', function(e) {
-  if (e.target !== fileInput && e.target.tagName !== 'BUTTON') {
-    fileInput.click();
-  }
+function activatePanel(panel) {
+  document.querySelectorAll('[data-feature-panel]').forEach(function(el) {
+    el.classList.toggle('active', el.getAttribute('data-feature-panel') === panel);
+  });
+  document.querySelectorAll('[data-panel]').forEach(function(el) {
+    el.classList.toggle('active', el.getAttribute('data-panel') === panel);
+  });
+}
+
+document.querySelectorAll('[data-panel]').forEach(function(link) {
+  link.addEventListener('click', function(e) {
+    e.preventDefault();
+    var panel = link.getAttribute('data-panel');
+    activatePanel(panel);
+    history.replaceState(null, '', '#panel-' + panel);
+  });
 });
 
-dropZone.addEventListener('dragover', function(e) {
-  e.preventDefault();
-  dropZone.classList.add('dragover');
-});
+activatePanel(document.body.getAttribute('data-initial-panel') || 'upload');
 
-dropZone.addEventListener('dragleave', function() {
-  dropZone.classList.remove('dragover');
-});
-
-dropZone.addEventListener('drop', function(e) {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  if (e.dataTransfer.files.length > 0) {
-    fileInput.files = e.dataTransfer.files;
-    onFileSelected(fileInput);
-  }
-});
+if (dropZone && fileInput) {
+  dropZone.addEventListener('click', function(e) {
+    if (e.target !== fileInput && e.target.tagName !== 'BUTTON') fileInput.click();
+  });
+  dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', function() {
+    dropZone.classList.remove('dragover');
+  });
+  dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length > 0) {
+      fileInput.files = e.dataTransfer.files;
+      onFileSelected(fileInput);
+    }
+  });
+}
 
 function onFileSelected(input) {
   if (input.files && input.files[0]) {
@@ -243,7 +270,7 @@ function onFileSelected(input) {
     fileName.className = 'file-name active';
     dropZone.classList.add('has-file');
     var companyInput = document.querySelector('input[name="company_name"]');
-    if (!companyInput.value) {
+    if (companyInput && !companyInput.value) {
       var guess = name.replace(/\.(xlsx|xls|pdf)$/i, '')
                       .replace(/[_\-\d]+$/g, '')
                       .replace(/财务报表|年报|审计|年度报告/g, '');
@@ -262,9 +289,7 @@ function startLoading() {
   var btn = document.getElementById('submitBtn');
   btn.disabled = true;
   btn.textContent = '分析中';
-  if (loadingTimeout) {
-    clearTimeout(loadingTimeout);
-  }
+  if (loadingTimeout) clearTimeout(loadingTimeout);
   loadingTimeout = setTimeout(function() {
     var sub = document.getElementById('loadingSub');
     if (sub) {
@@ -288,6 +313,36 @@ function startLoading() {
       document.getElementById('loadingSub').textContent = '报告即将生成，请稍候。';
     }
   }, 2500);
+}
+
+function fillWorkbenchAsk(text) {
+  document.getElementById('workbenchAskQuestion').value = text;
+}
+
+function askFromWorkbench() {
+  var reportId = document.getElementById('askReportId').value;
+  var question = document.getElementById('workbenchAskQuestion').value.trim();
+  var out = document.getElementById('workbenchAskAnswer');
+  if (!reportId) {
+    out.textContent = '请先在历史记录中选择一个已生成报告。';
+    return;
+  }
+  if (!question) {
+    out.textContent = '请先输入追问问题。';
+    return;
+  }
+  out.textContent = '正在生成回答...';
+  fetch('/api/ask', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({report_id: reportId, question: question})
+  }).then(function(resp) {
+    return resp.json();
+  }).then(function(data) {
+    out.textContent = data.answer || data.message || '未生成回答。';
+  }).catch(function(err) {
+    out.textContent = '追问失败：' + err;
+  });
 }
 </script>
 </body>
