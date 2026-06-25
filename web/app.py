@@ -636,6 +636,11 @@ def _build_template_data(state: dict) -> dict:
         "metric_settings_groups": group_metric_settings(metric_settings_items),
         "metric_blocks": build_metric_blocks(metric_settings_items),
         "metric_interpretations": state.get("metric_interpretations", []),
+        "interp_lookup": {
+            item["metric"]: item.get("interpretation", "")
+            for item in state.get("metric_interpretations", [])
+            if item.get("metric")
+        },
         "macro_context": state.get("macro_context", {}),
         "macro_insights": state.get("macro_insights", {}),
         "industry_benchmark_insights": state.get("industry_benchmark_insights", {}),

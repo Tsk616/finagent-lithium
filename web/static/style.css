@@ -204,6 +204,7 @@ body {
 .ind-value { font-size: 28px; font-weight: 700; margin: 4px 0; color: var(--accent-strong); }
 .ind-range { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
 .ind-explanation { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+.ind-ai-note { font-size: 12px; color: var(--accent); line-height: 1.4; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
 .muted { color: var(--text-muted); }
 
 .metric-settings {

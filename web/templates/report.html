@@ -113,31 +113,6 @@
   </div>
   {% endif %}
 
-  {% if metric_settings_groups %}
-  <details class="metric-settings">
-    <summary>指标设置与数据说明</summary>
-    <div class="metric-settings-body">
-      {% for group in metric_settings_groups %}
-      <div class="metric-settings-group">
-        <h3>{{ group.name }}</h3>
-        <div class="metric-settings-list">
-          {% for ind in group.indicators %}
-          <div class="metric-setting-row">
-            <div>
-              <strong>{{ ind.display_name or ind.name }}</strong>
-              <span>{{ ind.canonical_name }}</span>
-            </div>
-            <div>权重：{{ ind.weight if ind.weight is not none else "未配置" }}</div>
-            <div>正常：{{ ind.normal_range or "暂无" }}</div>
-            <div class="metric-setting-desc">{{ ind.explanation or ind.formula or "暂无说明" }}</div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-  </details>
-  {% endif %}
 
   {% if metric_blocks %}
   <div class="metric-block-grid">
@@ -189,6 +164,7 @@
       <div class="ind-value">{{ ind.value or "—" }}</div>
       <div class="ind-range">正常: {{ ind.normal_range }}</div>
       <div class="ind-explanation">{{ ind.explanation[:80] }}{% if ind.explanation|length > 80 %}...{% endif %}</div>
+      {% if interp_lookup.get(ind.name) %}<div class="ind-ai-note">💡 {{ interp_lookup[ind.name] }}</div>{% endif %}
     </div>
     {% endfor %}
 
@@ -199,27 +175,13 @@
         <span class="ind-risk">{{ ind.risk_level }}</span>
       </div>
       <div class="ind-value muted">—</div>
-      <div class="ind-range">需要上期数据才能计算</div>
+      <div class="ind-range">正常: {{ ind.normal_range }}（需上期数据）</div>
       <div class="ind-explanation">{{ ind.explanation[:80] }}{% if ind.explanation|length > 80 %}...{% endif %}</div>
     </div>
     {% endfor %}
     </div>
   </details>
 
-  {% if metric_interpretations %}
-  <div class="insight-panel">
-    <h3>AI 指标解读</h3>
-    <div class="insight-list">
-      {% for item in metric_interpretations[:6] %}
-      <div class="insight-item">
-        <strong>{{ item.metric }}</strong>
-        <span class="insight-status">{{ item.status }}</span>
-        <p>{{ item.interpretation }}</p>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
 </section>
 
 <!-- ── Chapter 3: Sector indicators ── -->
@@ -247,10 +209,9 @@
             {% if ind.is_key %}<span class="badge-key">⭐先行指标</span>{% endif %}
           </div>
           <div class="si-value">{{ ind.value or "数据缺失" }}</div>
-          {% if ind.value %}
-          <div class="si-range">正常区间: {{ ind.normal_range }}</div>
-          {% endif %}
+          <div class="si-range">正常区间: {{ ind.normal_range or "—" }}</div>
           <div class="si-explanation">{{ ind.explanation[:120] }}{% if ind.explanation|length > 120 %}...{% endif %}</div>
+          {% if interp_lookup.get(ind.name) %}<div class="ind-ai-note">💡 {{ interp_lookup[ind.name] }}</div>{% endif %}
         </div>
         {% endfor %}
       </div>
