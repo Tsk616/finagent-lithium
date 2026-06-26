@@ -248,6 +248,25 @@ def run_pipeline(
         except Exception:
             state["wind_status"] = {"live_calls_enabled": False, "last_error": "Wind adapter unavailable"}
 
+    # DeepSeek macro context fallback when Wind data is unavailable
+    if not state.get("_lithium_trend") and not state.get("macro_context", {}).get("lithium_trend"):
+        try:
+            from nodes.llm_client import call_llm
+            macro_prompt = (
+                "你是一位锂电行业宏观分析师。请简要分析当前锂电池行业的宏观环境，包括："
+                "1. 碳酸锂价格走势及原因；2. 锂电池行业产能与需求趋势；"
+                "3. 新能源汽车市场对锂电的影响；4. 国内外政策环境。"
+                "用中文回答，200字以内，只陈述事实和趋势，不做投资建议。"
+            )
+            macro_response = call_llm(
+                macro_prompt,
+                f"公司：{company_name}，行业：{state.get('sector_level2', '锂电池')}，报告期：{current_period}",
+            )
+            if macro_response and len(macro_response.strip()) > 30:
+                state["_deepseek_macro"] = macro_response.strip()
+        except Exception:
+            pass
+
     state["industry_comparison"] = build_industry_comparison(
         flatten_indicator_results(
             general_indicators=state["general_indicators"],

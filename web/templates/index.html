@@ -179,14 +179,27 @@
         <section class="analysis-card">
           <div class="section-heading compact">
             <span class="eyebrow">Peer Compare</span>
-            <h3>上传多家公司同年份年报</h3>
+            <h3>同行对比</h3>
           </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-weight:600;font-size:13px;">方式一：输入股票代码自动获取（推荐）</label>
+            <div style="display:flex;gap:8px;margin-top:6px;">
+              <input type="text" id="peerStockCodes" placeholder="输入股票代码，逗号分隔（如 300750,002594,300014）" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:4px;">
+              <button type="button" class="btn-primary" onclick="fetchPeerComparison()">自动获取</button>
+            </div>
+            <p class="muted-copy" style="margin-top:4px;">系统将从 Wind 自动抓取各公司最新财报数据进行对比。</p>
+            <div id="peerAutoResult" style="display:none;margin-top:8px;"></div>
+          </div>
+
+          <div class="divider"><span>或上传文件对比</span></div>
+
           <form method="POST" action="/compare" enctype="multipart/form-data" class="peer-upload-form">
-            <label>同行公司年报 / 财报文件
+            <label>方式二：上传多家公司同年份年报
               <input type="file" name="peer_files" accept=".xlsx,.xls,.pdf" multiple required>
             </label>
-            <p class="muted-copy">至少 2 家，最多处理前 8 个文件。系统会生成横向指标表、最优/最差标记和雷达评分数据。</p>
-            <button type="submit" class="btn-primary">开始同行对比</button>
+            <p class="muted-copy">至少 2 家，最多处理前 8 个文件。</p>
+            <button type="submit" class="btn-primary">开始文件对比</button>
           </form>
         </section>
         <section class="side-card">
@@ -196,7 +209,8 @@
           </div>
           <div class="mini-metrics">
             <span>横向指标表</span>
-            <span>最优/最差</span>
+            <span>最优/最差标记</span>
+            <span>毛利率/ROE</span>
             <span>雷达评分</span>
           </div>
         </section>
@@ -215,11 +229,18 @@
         {% if history_items %}
         <div class="history-list">
           {% for item in history_items %}
-          <a class="history-item" href="/report/{{ item.report_id }}">
-            <strong>{{ item.company_name }}</strong>
-            <span>{{ item.current_period or "报告期未注明" }} · 完整度 {{ "%.0f"|format(item.data_completeness * 100) }}%{% if item.weighted_score is not none %} · 评分 {{ item.weighted_score }}{% endif %}</span>
-            <small>{{ item.generated_at }}{% if item.sector %} · {{ item.sector }}{% endif %}</small>
-          </a>
+          <div class="history-item-wrap">
+            <a class="history-item" href="/report/{{ item.report_id }}">
+              <strong>{{ item.company_name }}</strong>
+              <span>{{ item.current_period or "报告期未注明" }} · 完整度 {{ "%.0f"|format(item.data_completeness * 100) }}%{% if item.weighted_score is not none %} · 评分 {{ item.weighted_score }}{% endif %}</span>
+              <small>{{ item.generated_at }}{% if item.sector %} · {{ item.sector }}{% endif %}</small>
+            </a>
+            <div class="history-ask-inline">
+              <input type="text" class="history-ask-input" placeholder="快速追问..." data-report-id="{{ item.report_id }}">
+              <button type="button" class="btn-small" onclick="askFromHistory(this)">发送</button>
+            </div>
+            <div class="history-ask-answer" style="display:none;"></div>
+          </div>
           {% endfor %}
         </div>
         {% else %}
@@ -381,6 +402,66 @@ function askFromWorkbench() {
     out.textContent = data.answer || data.message || '未生成回答。';
   }).catch(function(err) {
     out.textContent = '追问失败：' + err;
+  });
+}
+
+// ── Peer auto-fetch ──
+function fetchPeerComparison() {
+  var input = document.getElementById('peerStockCodes');
+  var resultDiv = document.getElementById('peerAutoResult');
+  var codes = input.value.trim();
+  if (!codes) { resultDiv.style.display = 'block'; resultDiv.innerHTML = '<span style="color:var(--red-text)">请输入股票代码</span>'; return; }
+  resultDiv.style.display = 'block';
+  resultDiv.innerHTML = '<span>正在从 Wind 获取数据...</span>';
+  fetch('/api/peer-compare', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({stock_codes: codes})
+  }).then(function(resp) { return resp.json(); })
+  .then(function(data) {
+    if (data.status === 'ok' && data.peers && data.peers.length > 0) {
+      var html = '<table class="peer-compare-table" style="font-size:12px;"><thead><tr><th style="text-align:left;">公司</th><th>营业收入</th><th>净利润</th><th>总资产</th><th>毛利率</th><th>ROE</th></tr></thead><tbody>';
+      data.peers.forEach(function(p) {
+        html += '<tr><td style="text-align:left;">' + p.name + ' <small>' + p.windcode + '</small></td>';
+        html += '<td>' + (p.revenue || '-') + '</td>';
+        html += '<td>' + (p.profit || '-') + '</td>';
+        html += '<td>' + (p.assets || '-') + '</td>';
+        html += '<td>' + (p.gross_margin || '-') + '</td>';
+        html += '<td>' + (p.roe || '-') + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      resultDiv.innerHTML = html;
+    } else {
+      resultDiv.innerHTML = '<span style="color:var(--red-text)">' + (data.message || '获取失败') + '</span>';
+    }
+  }).catch(function(err) {
+    resultDiv.innerHTML = '<span style="color:var(--red-text)">请求失败：' + err + '</span>';
+  });
+}
+
+// ── History inline ask ──
+function askFromHistory(btn) {
+  var wrap = btn.closest('.history-item-wrap');
+  var input = wrap.querySelector('.history-ask-input');
+  var answerDiv = wrap.querySelector('.history-ask-answer');
+  var question = input.value.trim();
+  var reportId = input.getAttribute('data-report-id');
+  if (!question || !reportId) return;
+  answerDiv.style.display = 'block';
+  answerDiv.textContent = '正在生成回答...';
+  btn.disabled = true;
+  fetch('/api/ask', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({report_id: reportId, question: question})
+  }).then(function(resp) {
+    return resp.json();
+  }).then(function(data) {
+    answerDiv.textContent = data.answer || data.message || '未生成回答。';
+    btn.disabled = false;
+  }).catch(function(err) {
+    answerDiv.textContent = '追问失败：' + err;
+    btn.disabled = false;
   });
 }
 

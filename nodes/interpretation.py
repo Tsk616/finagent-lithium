@@ -80,7 +80,7 @@ def _interpret_metric(name: str, ind: Dict[str, Any]) -> Dict[str, Any]:
             "value": None,
             "unit": unit,
             "risk_level": risk,
-            "interpretation": f"{display_name} has insufficient data, so no conclusion is generated.",
+            "interpretation": f"{display_name}数据不足，暂无法生成结论。",
             "evidence": {},
         }
 
@@ -92,9 +92,9 @@ def _interpret_metric(name: str, ind: Dict[str, Any]) -> Dict[str, Any]:
         status = "warning"
 
     if source_explanation:
-        interpretation = f"{display_name} is {formatted_value}. {source_explanation}"
+        interpretation = f"{display_name}为{formatted_value}。{source_explanation}"
     else:
-        interpretation = f"{display_name} is {formatted_value}; the conclusion is based only on this calculated value."
+        interpretation = f"{display_name}为{formatted_value}，结论仅基于该计算值。"
 
     return {
         "metric": display_name,
@@ -112,7 +112,7 @@ def _interpret_macro_context(macro_context: Dict[str, Any]) -> Dict[str, Any]:
     if not macro_context:
         return {
             "available": False,
-            "summary": "No macro data available.",
+            "summary": "暂无宏观数据。",
             "points": [],
         }
 
@@ -127,22 +127,22 @@ def _interpret_macro_context(macro_context: Dict[str, Any]) -> Dict[str, Any]:
         change = trend.get("change_3m_pct")
         direction = trend.get("trend")
         if current is not None:
-            points.append(f"Lithium price latest value is {_format_value(current, unit)}.")
+            points.append(f"碳酸锂最新价格为{_format_value(current, unit)}。")
         if change is not None:
-            points.append(f"Three-month change is {_format_value(change, '%')}.")
+            points.append(f"近三月变动{_format_value(change, '%')}。")
         if direction:
-            points.append(f"Trend direction: {direction}.")
+            points.append(f"趋势方向：{direction}。")
 
     if not points:
         return {
             "available": False,
-            "summary": "Macro data is present but insufficient for interpretation.",
+            "summary": "宏观数据不足，暂无法解读。",
             "points": [],
         }
 
     return {
         "available": True,
-        "summary": " ".join(points),
+        "summary": "".join(points),
         "points": points,
     }
 
@@ -152,7 +152,7 @@ def _interpret_industry_comparison(industry_comparison: Dict[str, Any]) -> Dict[
     if not industry_comparison.get("available") or not comparisons:
         return {
             "available": False,
-            "summary": industry_comparison.get("reason") or "No benchmark data available.",
+            "summary": industry_comparison.get("reason") or "暂无行业对标数据。",
             "points": [],
         }
 
@@ -165,16 +165,16 @@ def _interpret_industry_comparison(industry_comparison: Dict[str, Any]) -> Dict[
         if not metric:
             continue
         if relation == "better_than_industry":
-            label = "better than"
+            label = "优于"
         elif relation == "worse_than_industry":
-            label = "worse than"
+            label = "劣于"
         else:
-            label = "close to"
-        points.append(f"{metric} is {label} industry average ({current} vs {average}).")
+            label = "接近"
+        points.append(f"{metric}{label}行业均值（{current} vs {average}）。")
 
     return {
         "available": True,
-        "summary": " ".join(points) if points else "Benchmark data is available but not interpretable.",
+        "summary": "".join(points) if points else "行业对标数据可用但暂无法解读。",
         "points": points,
     }
 
@@ -190,19 +190,19 @@ def _build_risk_summary(
 
     if anomaly_signals:
         level = "anomaly_detected"
-        summary = f"{len(anomaly_signals)} anomaly signal(s) were detected."
+        summary = f"检测到{len(anomaly_signals)}条异常信号。"
     elif high_risk_count:
         level = "high_risk"
-        summary = f"{high_risk_count} high-risk metric(s) require attention."
+        summary = f"{high_risk_count}项高风险指标需要关注。"
     elif warning_count:
         level = "watch"
-        summary = f"{warning_count} warning metric(s) should be monitored."
+        summary = f"{warning_count}项警惕指标需要持续跟踪。"
     else:
         level = "stable"
-        summary = "No obvious anomaly signal was detected."
+        summary = "未检测到明显异常信号。"
 
     if score is not None:
-        summary = f"Weighted score is {score}/100. {summary}"
+        summary = f"综合评分{score}/100。{summary}"
 
     return {
         "level": level,

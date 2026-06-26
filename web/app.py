@@ -257,6 +257,7 @@ def api_ask():
     payload = request.get_json() or {}
     report_id = payload.get("report_id", "")
     question = str(payload.get("question", "")).strip()
+    conversation = payload.get("conversation", [])
     if not question:
         return jsonify({"status": "error", "message": "question is required"}), 400
 
@@ -264,7 +265,7 @@ def api_ask():
     if not state:
         return jsonify({"status": "error", "message": "report_id not found or expired"}), 404
 
-    answer = _answer_followup_question(state, question)
+    answer = _answer_followup_question(state, question, conversation)
     return jsonify({"status": "ok", "answer": answer})
 
 
@@ -296,6 +297,55 @@ def compare_peers():
     return render_template("compare.html", comparison=comparison, peers=peer_rows)
 
 
+@app.route("/api/peer-compare", methods=["POST"])
+def api_peer_compare():
+    """Fetch peer comparison data from Wind by stock codes."""
+    payload = request.get_json() or {}
+    codes_str = payload.get("stock_codes", "")
+    if not codes_str:
+        return jsonify({"status": "error", "message": "stock_codes is required"}), 400
+
+    codes = [c.strip() for c in codes_str.replace("，", ",").split(",") if c.strip()]
+    if len(codes) < 1:
+        return jsonify({"status": "error", "message": "至少输入1个股票代码"}), 400
+
+    try:
+        from nodes.wind_adapter import stock_code_to_windcode, fetch_financials
+        peers = []
+        for code in codes[:8]:
+            windcode = stock_code_to_windcode(code)
+            fin = fetch_financials(windcode, period="最新一期", timeout=12)
+            if fin:
+                peer = {"windcode": windcode, "name": _WINDCODE_NAME_MAP.get(windcode, windcode)}
+                rev = fin.get("营业收入")
+                cost = fin.get("营业成本")
+                profit = fin.get("净利润")
+                assets = fin.get("总资产")
+                equity = fin.get("净资产")
+                for key, val in [("revenue", rev), ("profit", profit), ("assets", assets), ("equity", equity)]:
+                    if val is not None:
+                        peer[key] = f"{val/1e8:.0f}亿" if abs(val) >= 1e8 else f"{val:.0f}"
+                    else:
+                        peer[key] = "-"
+                if rev and cost and rev != 0:
+                    peer["gross_margin"] = f"{(rev - cost) / rev * 100:.1f}%"
+                else:
+                    peer["gross_margin"] = "-"
+                if profit and equity and equity != 0:
+                    peer["roe"] = f"{profit / equity * 100:.1f}%"
+                else:
+                    peer["roe"] = "-"
+                peers.append(peer)
+            else:
+                peers.append({"windcode": windcode, "name": _WINDCODE_NAME_MAP.get(windcode, windcode),
+                              "revenue": "-", "profit": "-", "assets": "-", "equity": "-",
+                              "gross_margin": "-", "roe": "-"})
+
+        return jsonify({"status": "ok", "peers": peers})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 def _save_report_state(state: dict) -> str:
     """Keep the latest reports available for history and follow-up Q&A."""
     report_id = str(uuid.uuid4())[:12]
@@ -323,7 +373,7 @@ def _save_report_state(state: dict) -> str:
     return report_id
 
 
-def _answer_followup_question(state: dict, question: str) -> str:
+def _answer_followup_question(state: dict, question: str, conversation: list = None) -> str:
     """Use report evidence for follow-up Q&A, with a conservative fallback."""
     compact_state = {
         "company_name": state.get("company_name"),
@@ -339,15 +389,22 @@ def _answer_followup_question(state: dict, question: str) -> str:
         "anomaly_signals": state.get("anomaly_signals") or [],
     }
     system_prompt = (
-        "You are FinAgent, a financial analysis assistant. Answer in Chinese. "
-        "Only use the supplied report data. If the data is insufficient, say so clearly. "
-        "Do not invent numbers, peers, macro data, or investment advice."
+        "你是 FinAgent 财务分析助手。请用中文回答。"
+        "只使用提供的报告数据回答问题。如果数据不足，明确说明。"
+        "不要编造数据、同行对比或投资建议。回答要简洁专业，像分析师面对投资人。"
     )
-    user_message = json.dumps(
-        {"question": question, "report_data": compact_state},
-        ensure_ascii=False,
-        default=str,
-    )
+
+    # Build context with conversation history
+    context_parts = [json.dumps({"report_data": compact_state}, ensure_ascii=False, default=str)]
+    if conversation:
+        history_text = "\n".join(
+            f"{'用户' if m.get('role') == 'user' else '助手'}: {m.get('content', '')}"
+            for m in conversation[-6:]  # Keep last 3 rounds
+        )
+        context_parts.append(f"\n对话历史:\n{history_text}")
+    context_parts.append(f"\n当前问题: {question}")
+
+    user_message = "\n".join(context_parts)
     answer = call_llm(system_prompt, user_message)
     if answer:
         return answer.strip()
@@ -525,7 +582,7 @@ def _build_template_data(state: dict) -> dict:
                 "normal_range": ind.get("normal_range", ""),
                 "warning_range": ind.get("warning_range", ""),
                 "high_risk_range": ind.get("high_risk_range", ""),
-                "explanation": ind.get("single_mapping", ind.get("explanation", ""))[:150],
+                "explanation": ind.get("single_mapping", ind.get("explanation", "")),
                 "formula": ind.get("formula", ""),
                 "is_pending": "待补充" in risk,
                 "is_key": ind.get("is_key_indicator", False),
@@ -659,6 +716,8 @@ def _build_template_data(state: dict) -> dict:
         "has_peers": bool(state.get("_peer_comparison")),
         # Macro context
         "lithium_trend": state.get("_lithium_trend"),
+        # DeepSeek macro fallback
+        "deepseek_macro": state.get("_deepseek_macro", ""),
     }
 
 
@@ -706,8 +765,7 @@ def _format_peer_data(peers: list) -> list:
             "is_current": p.get("is_current", False),
         }
         # Format large numbers for display
-        for key, label in [("revenue", "营业收入"), ("profit", "净利润"),
-                           ("assets", "总资产"), ("equity", "净资产")]:
+        for key in ("revenue", "profit", "assets", "equity"):
             val = p.get(key)
             if val is not None:
                 if abs(val) >= 1e12:
@@ -718,6 +776,19 @@ def _format_peer_data(peers: list) -> list:
                     item[key] = f"{val:.0f}"
             else:
                 item[key] = "-"
+        # Derived ratio metrics
+        rev = p.get("revenue")
+        cost = p.get("cost")
+        eq = p.get("equity")
+        pft = p.get("profit")
+        if rev and cost and rev != 0:
+            item["gross_margin"] = f"{(rev - cost) / rev * 100:.1f}%"
+        else:
+            item["gross_margin"] = "-"
+        if pft and eq and eq != 0:
+            item["roe"] = f"{pft / eq * 100:.1f}%"
+        else:
+            item["roe"] = "-"
         result.append(item)
     return result
 
