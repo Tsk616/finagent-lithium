@@ -102,15 +102,15 @@ def test_wind_cli_uses_cache_before_subprocess():
 
 
 def test_wind_only_financials_do_not_fallback_to_akshare():
-    """Wind failures should return missing data instead of spending time on other APIs."""
+    """When Wind fails, AKShare should be tried as fallback for data completeness."""
     from nodes import wind_adapter
 
     with patch.object(wind_adapter, "_wind_fetch_financials", return_value=None):
-        with patch.object(wind_adapter, "_ak_fetch_financials") as ak_fetch:
+        with patch.object(wind_adapter, "_ak_fetch_financials", return_value=None) as ak_fetch:
             result = wind_adapter.fetch_financials("002594.SZ", period="2025年报", timeout=1)
 
     assert result is None
-    assert ak_fetch.call_count == 0
+    assert ak_fetch.call_count == 1
 
 
 def test_wind_only_macro_context_does_not_fallback_to_akshare():

@@ -1536,15 +1536,30 @@ def _ak_supplement_ths(
         _THS_COLUMNS = {
             "扣非净利润": "扣非净利润",
             "净利润": "归母净利润",
+            "营业总收入": "营业收入",
+            "营业收入": "营业收入",
+            "基本每股收益": "基本每股收益",
+            "每股收益": "基本每股收益",
+            "净资产收益率": "ROE",
+            "每股净资产": "每股净资产",
         }
 
         for ths_col, canonical in _THS_COLUMNS.items():
-            if ths_col not in df.columns:
+            # Exact match first, then fuzzy (column name contains key)
+            matched_col = None
+            if ths_col in df.columns:
+                matched_col = ths_col
+            else:
+                for c in df.columns:
+                    if ths_col in str(c):
+                        matched_col = c
+                        break
+            if matched_col is None:
                 continue
             if canonical in result and result[canonical] is not None:
                 continue
 
-            raw = row[ths_col]
+            raw = row[matched_col]
             val = _ak_parse_ths_value(raw)
             if val is not None:
                 result[canonical] = val
@@ -1783,17 +1798,49 @@ def fetch_financials(
         or None if data cannot be fetched.
     """
     # Phase 1: Wind MCP (primary)
+    result = None
     try:
         result = _wind_fetch_financials(windcode, period, timeout=min(timeout, 15))
         if result and len(result) >= 3:
             logger.info("Wind MCP: %d accounts for %s (%s)", len(result), windcode, period)
-            return result
+        else:
+            result = None
     except Exception as e:
         logger.warning("Wind MCP fetch_financials exception: %s", e)
 
-    # Phase 2: AKShare (fallback)
-    logger.info("Wind-only fetch_financials returned no data for %s (%s)", windcode, period)
-    return None
+    # Phase 2: AKShare full fetch (fallback when Wind returned nothing)
+    if not result:
+        try:
+            result = _ak_fetch_financials(windcode, period, timeout=timeout)
+            if result:
+                logger.info("AKShare fallback: %d accounts for %s", len(result), windcode)
+                return result
+        except Exception as e:
+            logger.warning("AKShare fallback exception: %s", e)
+        logger.info("No financial data from Wind or AKShare for %s (%s)", windcode, period)
+        return None
+
+    # Phase 3: Supplement Wind data with AKShare for critical missing accounts
+    _CRITICAL_ACCOUNTS = ("扣非净利润", "经营活动现金流净额", "净资产")
+    _PRIOR_ACCOUNTS = ("上期营业收入", "营业收入上期", "期初应收账款", "期初存货", "期初净资产")
+    missing_critical = [a for a in _CRITICAL_ACCOUNTS if result.get(a) is None]
+    missing_prior = not any(result.get(a) is not None for a in _PRIOR_ACCOUNTS)
+
+    if missing_critical or missing_prior:
+        target_date = _period_to_date(period)
+        if missing_critical:
+            try:
+                _ak_supplement_ths(result, windcode, target_date)
+            except Exception:
+                pass
+        if missing_prior:
+            try:
+                _ak_extract_prior_period(result, windcode, target_date)
+            except Exception:
+                pass
+        logger.info("Wind+AKShare supplement: %d accounts for %s", len(result), windcode)
+
+    return result
 
 
 def fetch_company_info(windcode: str, timeout: int = 6) -> Optional[Dict[str, Any]]:
