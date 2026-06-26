@@ -171,6 +171,50 @@ def run_pipeline(
         except Exception as exc:
             state["_wind_fetch_error"] = str(exc)
 
+    # ── DeepSeek supplement for critical missing accounts ──
+    _CRITICAL_FOR_INDICATORS = {
+        "扣非净利润": "扣非销售净利率、净利润现金含量、扣非ROE",
+        "经营活动现金流净额": "净利润现金含量",
+    }
+    _PRIOR_FOR_YOY = {
+        "上期营业收入": "营收同比增速",
+        "期初应收账款": "应收账款同比增速",
+        "期初存货": "存货同比增速",
+        "期初净资产": "扣非ROE",
+    }
+    missing_critical = [k for k in _CRITICAL_FOR_INDICATORS if financial_data.get(k) is None]
+    missing_prior = [k for k in _PRIOR_FOR_YOY
+                     if financial_data.get(k) is None
+                     and not financial_data.get(k.replace("上期", "").replace("期初", "") + "上期")]
+    all_missing = missing_critical + missing_prior
+
+    if all_missing and (company_name or stock_code):
+        try:
+            from nodes.llm_client import call_llm
+            accounts_str = "、".join(all_missing)
+            supplement_prompt = (
+                "你是财务数据查询工具。请返回以下公司的指定财务科目数据。\n\n"
+                "## 要求\n"
+                "1. 只返回 JSON，格式: {\"科目名\": 数值(元)}\n"
+                "2. 数值必须是元为单位的数字，不带单位文字\n"
+                "3. 无法确定的写 null\n"
+                "4. 只输出 JSON，不加任何说明或 markdown\n\n"
+                f"## 查询\n公司：{company_name}，股票代码：{stock_code}，报告期：{current_period}\n"
+                f"需要科目：{accounts_str}"
+            )
+            resp = call_llm(supplement_prompt, "", config={"timeout": 15})
+            if resp and len(resp.strip()) > 5:
+                cleaned = resp.strip()
+                if cleaned.startswith("```"):
+                    cleaned = cleaned.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                supplement_data = json.loads(cleaned)
+                for key, val in supplement_data.items():
+                    if val is not None and key in all_missing and financial_data.get(key) is None:
+                        financial_data[key] = float(val)
+                        state.setdefault("_deepseek_supplemented", []).append(key)
+        except Exception:
+            pass
+
     # Update state with possibly enriched financial_data
     state["financial_data"] = financial_data
 
