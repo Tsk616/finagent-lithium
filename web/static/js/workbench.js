@@ -1,0 +1,243 @@
+/**
+ * workbench.js — FinAgent-Lithium workbench (index) page interactions.
+ * Handles panel switching, file upload/drag-drop, form validation,
+ * loading overlay, ask/follow-up, peer comparison, and health check.
+ */
+
+// ── DOM references ──
+var dropZone = document.getElementById('dropZone');
+var fileInput = document.getElementById('fileInput');
+var fileName = document.getElementById('fileName');
+
+// ── Panel switching ──
+function activatePanel(panel) {
+  document.querySelectorAll('[data-feature-panel]').forEach(function(el) {
+    el.classList.toggle('active', el.getAttribute('data-feature-panel') === panel);
+  });
+  document.querySelectorAll('[data-panel]').forEach(function(el) {
+    el.classList.toggle('active', el.getAttribute('data-panel') === panel);
+  });
+}
+
+document.querySelectorAll('[data-panel]').forEach(function(link) {
+  link.addEventListener('click', function(e) {
+    e.preventDefault();
+    var panel = link.getAttribute('data-panel');
+    activatePanel(panel);
+    history.replaceState(null, '', '#panel-' + panel);
+  });
+});
+
+activatePanel(document.body.getAttribute('data-initial-panel') || 'upload');
+
+// ── File upload / drag-drop ──
+if (dropZone && fileInput) {
+  dropZone.addEventListener('click', function(e) {
+    if (e.target !== fileInput && e.target.tagName !== 'BUTTON') fileInput.click();
+  });
+  dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', function() {
+    dropZone.classList.remove('dragover');
+  });
+  dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length > 0) {
+      fileInput.files = e.dataTransfer.files;
+      onFileSelected(fileInput);
+    }
+  });
+}
+
+function onFileSelected(input) {
+  if (input.files && input.files[0]) {
+    var name = input.files[0].name;
+    fileName.textContent = '已选择：' + name;
+    fileName.className = 'file-name active';
+    dropZone.classList.add('has-file');
+    var companyInput = document.querySelector('input[name="company_name"]');
+    if (companyInput && !companyInput.value) {
+      var guess = name.replace(/\.(xlsx|xls|pdf)$/i, '')
+                      .replace(/[_\-\d]+$/g, '')
+                      .replace(/财务报表|年报|审计|年度报告/g, '');
+      companyInput.placeholder = guess || '宁德时代';
+    }
+  }
+}
+
+// ── Error display ──
+function showError(msg) {
+  var el = document.getElementById('clientError');
+  document.getElementById('clientErrorMsg').textContent = msg;
+  el.style.display = 'flex';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function hideError() {
+  document.getElementById('clientError').style.display = 'none';
+}
+
+// ── Form validation ──
+function validateAndLoad() {
+  hideError();
+  var hasFile = fileInput.files && fileInput.files.length > 0;
+  var jsonField = document.querySelector('textarea[name="financial_data_json"]');
+  var hasJson = jsonField && jsonField.value.trim().length > 2;
+  var hasCompany = document.querySelector('input[name="company_name"]').value.trim();
+  if (!hasFile && !hasJson && !hasCompany) {
+    showError('请上传财报文件，或填写公司名称后手动录入数据，再提交分析。');
+    return false;
+  }
+  startLoading();
+  return true;
+}
+
+// ── Loading overlay ──
+var stepNames = ['step1', 'step2', 'step3', 'step4', 'step5'];
+var stepInterval = null;
+var loadingTimeout = null;
+
+function startLoading() {
+  var overlay = document.getElementById('loadingOverlay');
+  overlay.classList.add('active');
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '分析中';
+  if (loadingTimeout) clearTimeout(loadingTimeout);
+  loadingTimeout = setTimeout(function() {
+    var sub = document.getElementById('loadingSub');
+    if (sub) {
+      sub.textContent = 'Wind 数据请求耗时较长；若数据不可用，系统会生成含缺数据说明的报告，不会静默消耗额度。';
+    }
+  }, 45000);
+
+  var current = 0;
+  stepInterval = setInterval(function() {
+    if (current > 0) {
+      var prev = document.getElementById(stepNames[current - 1]);
+      prev.classList.remove('active');
+      prev.classList.add('done');
+    }
+    if (current < stepNames.length) {
+      document.getElementById(stepNames[current]).classList.add('active');
+    }
+    current++;
+    if (current > stepNames.length) {
+      clearInterval(stepInterval);
+      document.getElementById('loadingSub').textContent = '报告即将生成，请稍候。';
+    }
+  }, 2500);
+}
+
+// ── Workbench ask (follow-up) ──
+function fillWorkbenchAsk(text) {
+  document.getElementById('workbenchAskQuestion').value = text;
+}
+
+function askFromWorkbench() {
+  var reportId = document.getElementById('askReportId').value;
+  var question = document.getElementById('workbenchAskQuestion').value.trim();
+  var out = document.getElementById('workbenchAskAnswer');
+  if (!reportId) {
+    out.textContent = '请先在历史记录中选择一个已生成报告。';
+    return;
+  }
+  if (!question) {
+    out.textContent = '请先输入追问问题。';
+    return;
+  }
+  out.textContent = '正在生成回答...';
+  fetch('/api/ask', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({report_id: reportId, question: question})
+  }).then(function(resp) {
+    return resp.json();
+  }).then(function(data) {
+    out.textContent = data.answer || data.message || '未生成回答。';
+  }).catch(function(err) {
+    out.textContent = '追问失败：' + err;
+  });
+}
+
+// ── Peer auto-fetch ──
+function fetchPeerComparison() {
+  var input = document.getElementById('peerStockCodes');
+  var resultDiv = document.getElementById('peerAutoResult');
+  var codes = input.value.trim();
+  if (!codes) { resultDiv.style.display = 'block'; resultDiv.innerHTML = '<span style="color:var(--red-text)">请输入股票代码</span>'; return; }
+  resultDiv.style.display = 'block';
+  resultDiv.innerHTML = '<span>正在从 Wind 获取数据...</span>';
+  fetch('/api/peer-compare', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({stock_codes: codes})
+  }).then(function(resp) { return resp.json(); })
+  .then(function(data) {
+    if (data.status === 'ok' && data.peers && data.peers.length > 0) {
+      var html = '<table class="peer-compare-table" style="font-size:12px;"><thead><tr><th style="text-align:left;">公司</th><th>营业收入</th><th>净利润</th><th>总资产</th><th>毛利率</th><th>ROE</th></tr></thead><tbody>';
+      data.peers.forEach(function(p) {
+        html += '<tr><td style="text-align:left;">' + p.name + ' <small>' + p.windcode + '</small></td>';
+        html += '<td>' + (p.revenue || '-') + '</td>';
+        html += '<td>' + (p.profit || '-') + '</td>';
+        html += '<td>' + (p.assets || '-') + '</td>';
+        html += '<td>' + (p.gross_margin || '-') + '</td>';
+        html += '<td>' + (p.roe || '-') + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      resultDiv.innerHTML = html;
+    } else {
+      resultDiv.innerHTML = '<span style="color:var(--red-text)">' + (data.message || '获取失败') + '</span>';
+    }
+  }).catch(function(err) {
+    resultDiv.innerHTML = '<span style="color:var(--red-text)">请求失败：' + err + '</span>';
+  });
+}
+
+// ── History inline ask ──
+function askFromHistory(btn) {
+  var wrap = btn.closest('.history-item-wrap');
+  var input = wrap.querySelector('.history-ask-input');
+  var answerDiv = wrap.querySelector('.history-ask-answer');
+  var question = input.value.trim();
+  var reportId = input.getAttribute('data-report-id');
+  if (!question || !reportId) return;
+  answerDiv.style.display = 'block';
+  answerDiv.textContent = '正在生成回答...';
+  btn.disabled = true;
+  fetch('/api/ask', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({report_id: reportId, question: question})
+  }).then(function(resp) {
+    return resp.json();
+  }).then(function(data) {
+    answerDiv.textContent = data.answer || data.message || '未生成回答。';
+    btn.disabled = false;
+  }).catch(function(err) {
+    answerDiv.textContent = '追问失败：' + err;
+    btn.disabled = false;
+  });
+}
+
+// ── Startup health check ──
+(function() {
+  var banner = document.getElementById('startupBanner');
+  var dot = document.getElementById('startupDot');
+  var msg = document.getElementById('startupMsg');
+  var timer = setTimeout(function() { banner.classList.add('visible'); }, 700);
+  fetch('/health').then(function() {
+    clearTimeout(timer);
+    msg.textContent = '服务就绪 ✓';
+    dot.classList.add('dot-ok');
+    banner.classList.add('visible');
+    setTimeout(function() { banner.classList.remove('visible'); }, 2000);
+  }).catch(function() {
+    clearTimeout(timer);
+    msg.textContent = '服务响应超时，请刷新页面重试';
+    dot.classList.add('dot-err');
+    banner.classList.add('visible', 'banner-err');
+  });
+})();

@@ -1,0 +1,263 @@
+"""
+Template data builders for FinAgent-Lithium.
+
+Transforms pipeline AnalysisState dicts into template-safe data structures
+for Jinja rendering. Separated from routes to keep routing thin.
+
+Does NOT handle HTTP concerns (request parsing, response building).
+"""
+
+import json
+from typing import Optional
+
+
+# Wind code -> company short name lookup (common lithium battery peers)
+WINDCODE_NAME_MAP = {
+    "300750.SZ": "宁德时代",
+    "002594.SZ": "比亚迪",
+    "002460.SZ": "赣锋锂业",
+    "002466.SZ": "天齐锂业",
+    "300014.SZ": "亿纬锂能",
+    "688005.SH": "容百科技",
+    "300450.SZ": "先导智能",
+    "603799.SH": "华友钴业",
+    "000792.SZ": "盐湖股份",
+    "002008.SZ": "大族激光",
+    "600549.SH": "厦门钨业",
+    "600482.SH": "中国动力",
+    "601168.SH": "西部矿业",
+    "300390.SZ": "天华新能",
+    "002709.SZ": "天赐材料",
+    "002080.SZ": "中材科技",
+}
+
+
+def format_ind_value(val, unit: str) -> Optional[str]:
+    """Format indicator value with unit, suppressing meaningless units."""
+    if val is None:
+        return None
+    # Suppress "无" unit (means dimensionless but looks confusing)
+    if not unit or unit == "无":
+        return f"{val:.2f}"
+    return f"{val:.2f}{unit}"
+
+
+def format_peer_data(peers: list) -> list:
+    """Format peer comparison data for template rendering.
+
+    Converts raw numeric values into human-readable strings with
+    appropriate scale suffixes (亿/万亿) and computes derived ratios.
+    """
+    if not peers:
+        return []
+    result = []
+    for p in peers:
+        wc = p.get("windcode", "")
+        item = {
+            "windcode": wc,
+            "name": p.get("name") or WINDCODE_NAME_MAP.get(wc, wc),
+            "is_current": p.get("is_current", False),
+        }
+        # Format large numbers for display
+        for key in ("revenue", "profit", "assets", "equity"):
+            val = p.get(key)
+            if val is not None:
+                if abs(val) >= 1e12:
+                    item[key] = f"{val/1e12:.2f}万亿"
+                elif abs(val) >= 1e8:
+                    item[key] = f"{val/1e8:.0f}亿"
+                else:
+                    item[key] = f"{val:.0f}"
+            else:
+                item[key] = "-"
+        # Derived ratio metrics
+        rev = p.get("revenue")
+        cost = p.get("cost")
+        eq = p.get("equity")
+        pft = p.get("profit")
+        if rev and cost and rev != 0:
+            item["gross_margin"] = f"{(rev - cost) / rev * 100:.1f}%"
+        else:
+            item["gross_margin"] = "-"
+        if pft and eq and eq != 0:
+            item["roe"] = f"{pft / eq * 100:.1f}%"
+        else:
+            item["roe"] = "-"
+        result.append(item)
+    return result
+
+
+def parse_json_field(raw: str) -> dict:
+    """Parse a JSON field from form data, returning {} on failure."""
+    if not raw or not raw.strip():
+        return {}
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+
+
+def build_template_data(state: dict) -> dict:
+    """Build a template-safe data dict from pipeline state.
+
+    This is the main data transformation entry point. It takes a raw
+    AnalysisState dict and returns a flat dict suitable for Jinja2's
+    render_template(**data) pattern.
+    """
+
+    def risk_color(risk_str: str) -> str:
+        if "正常" in risk_str: return "normal"
+        if "警惕" in risk_str: return "warning"
+        if "高风险" in risk_str: return "danger"
+        return "pending"
+
+    def simplify_inds(indicators: dict) -> list:
+        result = []
+        for name, ind in indicators.items():
+            val = ind.get("value")
+            risk = str(ind.get("risk_level", ""))
+            result.append({
+                "name": name,
+                "value": format_ind_value(val, ind.get('unit', '')),
+                "risk_level": risk,
+                "risk_color": risk_color(risk),
+                "normal_range": ind.get("normal_range", ""),
+                "warning_range": ind.get("warning_range", ""),
+                "high_risk_range": ind.get("high_risk_range", ""),
+                "explanation": ind.get("single_mapping", ind.get("explanation", "")),
+                "formula": ind.get("formula", ""),
+                "is_pending": "待补充" in risk,
+                "is_key": ind.get("is_key_indicator", False),
+                "is_fatal": ind.get("is_fatal_indicator", False),
+                "display_name": ind.get("display_name", name),
+                "canonical_name": ind.get("canonical_name", name),
+                "metric_category": ind.get("metric_category", ""),
+                "metric_type": ind.get("metric_type", ""),
+                "weight": ind.get("weight"),
+                "weight_logic": ind.get("weight_logic", ""),
+            })
+        return result
+
+    def group_metric_settings(items: list) -> list:
+        groups = {}
+        for item in items:
+            key = item.get("metric_type") or item.get("metric_category") or "未分类"
+            groups.setdefault(key, []).append(item)
+        return [
+            {"name": name, "indicators": indicators}
+            for name, indicators in groups.items()
+        ]
+
+    def build_metric_blocks(items: list) -> list:
+        blocks = []
+        for group in group_metric_settings(items):
+            indicators = group["indicators"]
+            if not indicators:
+                continue
+            abnormal = [
+                i for i in indicators
+                if i.get("risk_color") in ("warning", "danger")
+            ]
+            available = [i for i in indicators if not i.get("is_pending")]
+            sorted_core = sorted(
+                indicators,
+                key=lambda i: (
+                    0 if i.get("is_key") or i.get("is_fatal") else 1,
+                    -(i.get("weight") or 0),
+                    0 if not i.get("is_pending") else 1,
+                ),
+            )
+            blocks.append({
+                "name": group["name"],
+                "summary": {
+                    "total": len(indicators),
+                    "available": len(available),
+                    "abnormal": len(abnormal),
+                    "pending": len(indicators) - len(available),
+                },
+                "core_indicators": sorted_core[:4],
+                "details": indicators,
+            })
+        return blocks
+
+    general_indicators = state.get("general_indicators", {})
+    general_list = simplify_inds(general_indicators)
+    computable = [i for i in general_list if not i["is_pending"]]
+    pending = [i for i in general_list if i["is_pending"]]
+
+    sector_indicators = state.get("sector_indicators", {})
+    sector_tabs = []
+    metric_settings_items = list(general_list)
+    for sec_label, categories in sector_indicators.items():
+        tabs = []
+        for cat_name, indicators in categories.items():
+            simplified_sector_items = simplify_inds(indicators)
+            metric_settings_items.extend(simplified_sector_items)
+            tabs.append({
+                "name": cat_name,
+                "indicators": simplified_sector_items,
+            })
+        sector_tabs.append({"label": sec_label, "tabs": tabs})
+
+    linkage = state.get("linkage_diagnosis", [])
+    linkage_sorted = sorted(linkage, key=lambda d: (
+        0 if "高危" in d.get("status", "") else
+        1 if "风险" in d.get("status", "") else
+        2 if "衰退" in d.get("status", "") else 3
+    ))
+
+    anomalies = state.get("anomaly_signals", [])
+
+    return {
+        "company_name": state.get("company_name", ""),
+        "stock_code": state.get("stock_code", ""),
+        "current_period": state.get("current_period", ""),
+        "sector_level1": state.get("sector_level1", ""),
+        "sector_level2": state.get("sector_level2", ""),
+        "sector_characteristics": state.get("sector_characteristics", ""),
+        "analysis_focus": state.get("analysis_focus", ""),
+        "sub_sectors": state.get("sub_sectors"),
+        "is_integrated": bool(state.get("sub_sectors")),
+        "general_indicators": general_list,
+        "general_computable": computable,
+        "general_pending": pending,
+        "data_completeness": state.get("data_completeness", 0),
+        "sector_tabs": sector_tabs,
+        "key_indicators": simplify_inds(state.get("key_indicators_for_linkage", {})),
+        "linkage_diagnosis": linkage_sorted,
+        "anomaly_signals": anomalies,
+        "has_anomalies": len(anomalies) > 0,
+        "skipped_external": state.get("skipped_external_rules", 0),
+        "error_log": state.get("error_log", []),
+        "report_markdown": state.get("report_markdown", ""),
+        "weighted_score": state.get("weighted_score", {}),
+        "metric_config_summary": state.get("metric_config_summary", {}),
+        "metric_settings_groups": group_metric_settings(metric_settings_items),
+        "metric_blocks": build_metric_blocks(metric_settings_items),
+        "metric_interpretations": state.get("metric_interpretations", []),
+        "interp_lookup": {
+            item["metric"]: item.get("interpretation", "")
+            for item in state.get("metric_interpretations", [])
+            if item.get("metric")
+        },
+        "macro_context": state.get("macro_context", {}),
+        "macro_insights": state.get("macro_insights", {}),
+        "industry_benchmark_insights": state.get("industry_benchmark_insights", {}),
+        "analysis_models": state.get("analysis_models", {}),
+        "risk_summary": state.get("risk_summary", {}),
+        "wind_status": state.get("wind_status", {}),
+        "wind_fetch_attempted": state.get("_wind_fetch_attempted", False),
+        "wind_fetch_error": state.get("_wind_fetch_error", ""),
+        "industry_comparison": state.get("industry_comparison", {}),
+        "status": state.get("status", "unknown"),
+        "wind_enriched": state.get("_wind_enriched", False),
+        "wind_accounts_count": state.get("_wind_accounts_count", 0),
+        "wind_classified": state.get("_wind_classified", False),
+        # Peer comparison
+        "peer_comparison": format_peer_data(state.get("_peer_comparison", [])),
+        "has_peers": bool(state.get("_peer_comparison")),
+        # Macro context
+        "lithium_trend": state.get("_lithium_trend"),
+        # DeepSeek macro fallback
+        "deepseek_macro": state.get("_deepseek_macro", ""),
+    }
