@@ -4,6 +4,10 @@
  * loading overlay, ask/follow-up, peer comparison, and health check.
  */
 
+// ── Conversation history (per report_id) ──
+var workbenchConversations = {};
+var historyConversations = {};
+
 // ── DOM references ──
 var dropZone = document.getElementById('dropZone');
 var fileInput = document.getElementById('fileInput');
@@ -136,9 +140,25 @@ function fillWorkbenchAsk(text) {
   document.getElementById('workbenchAskQuestion').value = text;
 }
 
+function appendWorkbenchBubble(reportId, role, text) {
+  var out = document.getElementById('workbenchAskAnswer');
+  // On first message, clear the placeholder and switch to chat layout
+  if (!out.querySelector('.chat-bubble')) {
+    out.textContent = '';
+    out.style.maxHeight = '400px';
+    out.style.overflowY = 'auto';
+  }
+  var bubble = document.createElement('div');
+  bubble.className = 'chat-bubble chat-' + role;
+  bubble.textContent = text;
+  out.appendChild(bubble);
+  out.scrollTop = out.scrollHeight;
+}
+
 function askFromWorkbench() {
   var reportId = document.getElementById('askReportId').value;
-  var question = document.getElementById('workbenchAskQuestion').value.trim();
+  var input = document.getElementById('workbenchAskQuestion');
+  var question = input.value.trim();
   var out = document.getElementById('workbenchAskAnswer');
   if (!reportId) {
     out.textContent = '请先在历史记录中选择一个已生成报告。';
@@ -148,17 +168,45 @@ function askFromWorkbench() {
     out.textContent = '请先输入追问问题。';
     return;
   }
-  out.textContent = '正在生成回答...';
+
+  // Initialize conversation for this report if needed
+  if (!workbenchConversations[reportId]) {
+    workbenchConversations[reportId] = [];
+  }
+  workbenchConversations[reportId].push({role: 'user', content: question});
+  appendWorkbenchBubble(reportId, 'user', question);
+  input.value = '';
+
+  var controller = new AbortController();
+  var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
+
   fetch('/api/ask', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({report_id: reportId, question: question})
+    body: JSON.stringify({
+      report_id: reportId,
+      question: question,
+      conversation: workbenchConversations[reportId]
+    }),
+    signal: controller.signal
   }).then(function(resp) {
+    clearTimeout(timeoutId);
+    if (!resp.ok) throw new Error('服务器错误 (' + resp.status + ')');
     return resp.json();
   }).then(function(data) {
-    out.textContent = data.answer || data.message || '未生成回答。';
+    var answer = data.answer || data.message || '未生成回答。';
+    workbenchConversations[reportId].push({role: 'assistant', content: answer});
+    appendWorkbenchBubble(reportId, 'assistant', answer);
   }).catch(function(err) {
-    out.textContent = '追问失败：' + err;
+    var msg;
+    if (err.name === 'AbortError') {
+      msg = '请求超时，请稍后重试。';
+    } else {
+      msg = '追问失败：' + err.message;
+    }
+    appendWorkbenchBubble(reportId, 'assistant', msg);
+    // Remove the unanswered user message from conversation
+    workbenchConversations[reportId].pop();
   });
 }
 
@@ -197,6 +245,20 @@ function fetchPeerComparison() {
 }
 
 // ── History inline ask ──
+function appendHistoryBubble(answerDiv, role, text) {
+  // On first message, switch to chat layout
+  if (!answerDiv.querySelector('.chat-bubble')) {
+    answerDiv.textContent = '';
+    answerDiv.style.maxHeight = '300px';
+    answerDiv.style.overflowY = 'auto';
+  }
+  var bubble = document.createElement('div');
+  bubble.className = 'chat-bubble chat-' + role;
+  bubble.textContent = text;
+  answerDiv.appendChild(bubble);
+  answerDiv.scrollTop = answerDiv.scrollHeight;
+}
+
 function askFromHistory(btn) {
   var wrap = btn.closest('.history-item-wrap');
   var input = wrap.querySelector('.history-ask-input');
@@ -205,19 +267,47 @@ function askFromHistory(btn) {
   var reportId = input.getAttribute('data-report-id');
   if (!question || !reportId) return;
   answerDiv.style.display = 'block';
-  answerDiv.textContent = '正在生成回答...';
+
+  // Initialize conversation for this report if needed
+  if (!historyConversations[reportId]) {
+    historyConversations[reportId] = [];
+  }
+  historyConversations[reportId].push({role: 'user', content: question});
+  appendHistoryBubble(answerDiv, 'user', question);
+  input.value = '';
   btn.disabled = true;
+
+  var controller = new AbortController();
+  var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
+
   fetch('/api/ask', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({report_id: reportId, question: question})
+    body: JSON.stringify({
+      report_id: reportId,
+      question: question,
+      conversation: historyConversations[reportId]
+    }),
+    signal: controller.signal
   }).then(function(resp) {
+    clearTimeout(timeoutId);
+    if (!resp.ok) throw new Error('服务器错误 (' + resp.status + ')');
     return resp.json();
   }).then(function(data) {
-    answerDiv.textContent = data.answer || data.message || '未生成回答。';
+    var answer = data.answer || data.message || '未生成回答。';
+    historyConversations[reportId].push({role: 'assistant', content: answer});
+    appendHistoryBubble(answerDiv, 'assistant', answer);
     btn.disabled = false;
   }).catch(function(err) {
-    answerDiv.textContent = '追问失败：' + err;
+    var msg;
+    if (err.name === 'AbortError') {
+      msg = '请求超时，请稍后重试。';
+    } else {
+      msg = '追问失败：' + err.message;
+    }
+    appendHistoryBubble(answerDiv, 'assistant', msg);
+    // Remove the unanswered user message from conversation
+    historyConversations[reportId].pop();
     btn.disabled = false;
   });
 }

@@ -32,7 +32,12 @@ def api_ask():
     if not state:
         return jsonify({"status": "error", "message": "report_id not found or expired"}), 404
 
-    answer = _answer_followup_question(state, question, conversation)
+    try:
+        answer = _answer_followup_question(state, question, conversation)
+    except Exception as e:
+        print(f"[followup] Error answering question: {e}")
+        answer = "抱歉，生成回答时出现错误，请稍后重试。"
+
     return jsonify({"status": "ok", "answer": answer})
 
 
@@ -68,7 +73,7 @@ def _answer_followup_question(state: dict, question: str, conversation: list = N
     context_parts.append(f"\n当前问题: {question}")
 
     user_message = "\n".join(context_parts)
-    answer = call_llm(system_prompt, user_message)
+    answer = call_llm(system_prompt, user_message, config={"timeout": 25})
     if answer:
         return answer.strip()
     return _fallback_followup_answer(compact_state, question)

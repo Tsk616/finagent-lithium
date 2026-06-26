@@ -203,7 +203,15 @@ body {
 
 .ind-value { font-size: 28px; font-weight: 700; margin: 4px 0; color: var(--accent-strong); }
 .ind-range { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-.ind-explanation { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+.ind-explanation {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .ind-ai-note { font-size: 12px; color: var(--accent); line-height: 1.4; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
 .muted { color: var(--text-muted); }
 
@@ -445,7 +453,15 @@ body {
 .si-value { font-size: 22px; font-weight: 700; margin: 4px 0; }
 .si-value { color: var(--accent-strong); }
 .si-range { font-size: 12px; color: var(--text-muted); }
-.si-explanation { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+.si-explanation {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
 /* ── Linkage cards ──────────────────────────────────────────────── */
 
@@ -1235,11 +1251,32 @@ input:focus, textarea:focus { outline: none; border-color: var(--blue-link); }
 }
 .mdc-formula {
   font-family: "Courier New", monospace;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
   background: var(--bg-elevated);
   padding: 2px 6px;
   border-radius: 3px;
+  word-break: break-all;
+}
+.mdc-data-group {
+  background: rgba(232, 242, 255, 0.5);
+  border: 1px solid rgba(198, 216, 236, 0.6);
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+.mdc-data-group .mdc-value-row,
+.mdc-data-group .mdc-formula-row,
+.mdc-data-group .mdc-range-row {
+  margin-bottom: 4px;
+}
+.mdc-data-group .mdc-range-row:last-child {
+  margin-bottom: 0;
+}
+.mdc-explain-row {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  margin-top: 2px;
 }
 
 /* ── Peer comparison table ── */

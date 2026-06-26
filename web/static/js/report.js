@@ -35,6 +35,9 @@ function askReport() {
   btn.disabled = true;
   btn.textContent = '思考中...';
 
+  var controller = new AbortController();
+  var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
+
   fetch('/api/ask', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -42,8 +45,11 @@ function askReport() {
       report_id: reportId,
       question: question,
       conversation: askConversation
-    })
+    }),
+    signal: controller.signal
   }).then(function(resp) {
+    clearTimeout(timeoutId);
+    if (!resp.ok) throw new Error('服务器错误 (' + resp.status + ')');
     return resp.json();
   }).then(function(data) {
     var answer = data.answer || data.message || '未生成回答。';
@@ -52,7 +58,15 @@ function askReport() {
     btn.disabled = false;
     btn.textContent = '发送';
   }).catch(function(err) {
-    appendChatBubble('assistant', '追问失败：' + err);
+    var msg;
+    if (err.name === 'AbortError') {
+      msg = '请求超时，请稍后重试。';
+    } else {
+      msg = '追问失败：' + err.message;
+    }
+    appendChatBubble('assistant', msg);
+    // Remove the unanswered user message from conversation
+    askConversation.pop();
     btn.disabled = false;
     btn.textContent = '发送';
   });

@@ -143,19 +143,21 @@
             <span class="mdc-risk">{{ ind.risk_level }}</span>
           </div>
           <div class="mdc-body">
-            <div class="mdc-value-row">
-              <span class="mdc-label">数值</span>
-              <span class="mdc-value">{{ ind.value or "数据缺失" }}</span>
-            </div>
-            {% if ind.formula %}
-            <div class="mdc-formula-row">
-              <span class="mdc-label">公式</span>
-              <span class="mdc-formula">{{ ind.formula }}</span>
-            </div>
-            {% endif %}
-            <div class="mdc-range-row">
-              <span class="mdc-label">正常区间</span>
-              <span>{{ ind.normal_range or "—" }}</span>
+            <div class="mdc-data-group">
+              <div class="mdc-value-row">
+                <span class="mdc-label">数值</span>
+                <span class="mdc-value">{{ ind.value or "数据缺失" }}</span>
+              </div>
+              {% if ind.formula %}
+              <div class="mdc-formula-row">
+                <span class="mdc-label">公式</span>
+                <span class="mdc-formula">{{ ind.formula }}</span>
+              </div>
+              {% endif %}
+              <div class="mdc-range-row">
+                <span class="mdc-label">正常区间</span>
+                <span>{{ ind.normal_range or "—" }}</span>
+              </div>
             </div>
             {% if ind.explanation %}
             <div class="mdc-explain-row">
@@ -186,7 +188,7 @@
       </div>
       <div class="ind-value">{{ ind.value or "—" }}</div>
       <div class="ind-range">正常: {{ ind.normal_range }}</div>
-      <div class="ind-explanation">{{ ind.explanation[:80] }}{% if ind.explanation|length > 80 %}...{% endif %}</div>
+      <div class="ind-explanation">{{ ind.explanation }}</div>
       {% if interp_lookup.get(ind.name) %}<div class="ind-ai-note">💡 {{ interp_lookup[ind.name] }}</div>{% endif %}
     </div>
     {% endfor %}
@@ -199,7 +201,7 @@
       </div>
       <div class="ind-value muted">—</div>
       <div class="ind-range">正常: {{ ind.normal_range }}（需上期数据）</div>
-      <div class="ind-explanation">{{ ind.explanation[:80] }}{% if ind.explanation|length > 80 %}...{% endif %}</div>
+      <div class="ind-explanation">{{ ind.explanation }}</div>
     </div>
     {% endfor %}
     </div>
@@ -233,7 +235,7 @@
           </div>
           <div class="si-value">{{ ind.value or "数据缺失" }}</div>
           <div class="si-range">正常区间: {{ ind.normal_range or "—" }}</div>
-          <div class="si-explanation">{{ ind.explanation[:120] }}{% if ind.explanation|length > 120 %}...{% endif %}</div>
+          <div class="si-explanation">{{ ind.explanation }}</div>
           {% if interp_lookup.get(ind.name) %}<div class="ind-ai-note">💡 {{ interp_lookup[ind.name] }}</div>{% endif %}
         </div>
         {% endfor %}
