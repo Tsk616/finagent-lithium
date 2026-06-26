@@ -1,9 +1,10 @@
 """
-Market Data Adapter — Wind MCP primary + AKShare fallback.
+Market Data Adapter — Wind MCP primary + AKShare / MX Data fallback.
 
 Data sources (in priority order):
   1. Wind MCP (https://aifinmarket.wind.com.cn) — primary, via Node.js CLI subprocess
   2. AKShare (Sina / East Money / THS) — graceful fallback on any Wind failure
+  3. MX Data (东方财富妙想 REST API) — fallback when AKShare unavailable
 
 All public function signatures remain unchanged — drop-in for web/workflow.py.
 
@@ -1777,7 +1778,257 @@ def _ak_fetch_macro_context(timeout: int = 30) -> Optional[Dict[str, Any]]:
         return None
 
 
-# ── Public API: Orchestrators (Wind → AKShare fallback) ─────────────────────
+# ── MX Data (东方财富妙想) implementations ────────────────────────────────────
+
+_MX_API_URL = "https://mkapi2.dfcfs.com/finskillshub/api/claw/query"
+
+_MX_NAME_MAP = {
+    "营业收入": "营业收入",
+    "营业总收入": "营业收入",
+    "营业成本": "营业成本",
+    "营业总成本": "营业成本",
+    "扣除非经常性损益后归属于母公司股东的净利润": "扣非净利润",
+    "扣除非经常性损益净利润TTM(报告期)": "扣非净利润",
+    "资产总计": "总资产",
+    "总资产": "总资产",
+    "负债合计": "总负债",
+    "股东权益合计": "净资产",
+    "流动资产合计": "流动资产",
+    "流动负债合计": "流动负债",
+    "存货": "存货",
+    "预付款项": "预付款项",
+    "应收账款及票据": "应收账款",
+    "应收账款": "应收账款",
+    "经营活动产生的现金流量净额": "经营活动现金流净额",
+    "销售费用": "销售费用",
+    "管理费用": "管理费用",
+    "财务费用": "财务费用",
+    "研发费用": "研发费用",
+    "净利润": "净利润",
+    "归属于母公司股东的净利润": "归母净利润",
+}
+
+_MX_ALL_ACCOUNTS = [
+    "营业收入", "营业成本", "扣非净利润", "经营活动现金流净额",
+    "总资产", "总负债", "净资产", "流动资产", "流动负债",
+    "存货", "预付款项", "应收账款",
+    "销售费用", "管理费用", "财务费用", "研发费用",
+]
+
+
+def _mx_query(tool_query: str, timeout: int = 45) -> Optional[Dict[str, Any]]:
+    """Call MX Data API with a natural language query."""
+    import requests as _requests
+    api_key = os.environ.get("MX_APIKEY")
+    if not api_key:
+        logger.debug("MX_APIKEY not set, skipping MX Data query")
+        return None
+    try:
+        resp = _requests.post(
+            _MX_API_URL,
+            headers={"Content-Type": "application/json", "apikey": api_key},
+            json={"toolQuery": tool_query},
+            timeout=timeout,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        if result.get("status") != 0:
+            logger.warning("MX API error: %s", result.get("message"))
+            return None
+        return result
+    except Exception as e:
+        logger.warning("MX API request failed: %s", e)
+        return None
+
+
+def _mx_parse_financials(
+    result: Dict[str, Any],
+    rename_map: Optional[Dict[str, str]] = None,
+) -> Dict[str, float]:
+    """Parse MX API response into {canonical_account_name: value_in_yuan}."""
+    name_map_override = rename_map or {}
+    parsed: Dict[str, float] = {}
+    try:
+        dto_list = (
+            result.get("data", {})
+            .get("data", {})
+            .get("searchDataResultDTO", {})
+            .get("dataTableDTOList", [])
+        )
+    except (AttributeError, TypeError):
+        return parsed
+
+    for dto in dto_list:
+        if not isinstance(dto, dict):
+            continue
+        raw_table = dto.get("rawTable")
+        name_map = dto.get("nameMap")
+        if not isinstance(raw_table, dict) or not isinstance(name_map, dict):
+            continue
+
+        head_names = raw_table.get("headName", [])
+
+        # Detect aging analysis tables (应收账款账龄分析)
+        if head_names and isinstance(head_names[0], str) and "应收账款" in head_names[0]:
+            total_key = "应收账款"
+            canonical = name_map_override.get(total_key) or _MX_NAME_MAP.get(total_key, total_key)
+            for code, values in raw_table.items():
+                if code == "headName":
+                    continue
+                row_name = name_map.get(code, "")
+                if row_name == "合计" and isinstance(values, list) and values:
+                    try:
+                        parsed[canonical] = float(values[0])
+                    except (ValueError, TypeError):
+                        pass
+                    break
+            continue
+
+        a_share_idx = 0
+        for i, h in enumerate(head_names):
+            if isinstance(h, str) and (".SZ" in h or ".SH" in h or ".BJ" in h):
+                a_share_idx = i
+                break
+
+        for code, values in raw_table.items():
+            if code == "headName":
+                continue
+            mx_name = name_map.get(code, "")
+            if not mx_name or mx_name in ("股票名称", "数据来源"):
+                continue
+
+            canonical = name_map_override.get(mx_name) or _MX_NAME_MAP.get(mx_name)
+            if not canonical:
+                continue
+
+            if not isinstance(values, list) or a_share_idx >= len(values):
+                continue
+            raw_val = values[a_share_idx]
+            if raw_val in (None, "", "-"):
+                continue
+            try:
+                parsed[canonical] = float(raw_val)
+            except (ValueError, TypeError):
+                continue
+
+    return parsed
+
+
+def _mx_period_label(period: str) -> str:
+    """Convert our period format to MX query period text."""
+    if not period or period in ("最新一期", "最新", ""):
+        year = date.today().year
+        return f"{year - 1}年报"
+    m = re.match(r"(\d{4})", period)
+    if m:
+        return period
+    return period
+
+
+def _mx_prior_period_label(period: str) -> str:
+    """Derive the prior year period label from current period."""
+    year = _extract_period_year(period)
+    if not year:
+        year = date.today().year - 1
+    return f"{year - 1}年报"
+
+
+def _mx_stock_label(windcode: str) -> str:
+    """Convert windcode to a stock label for MX NL queries (code only)."""
+    return windcode.split(".")[0]
+
+
+def _mx_fetch_financials(
+    windcode: str,
+    period: str = "最新一期",
+) -> Optional[Dict[str, Optional[float]]]:
+    """Fetch financial data from MX Data API as full fallback."""
+    api_key = os.environ.get("MX_APIKEY")
+    if not api_key:
+        return None
+
+    code = _mx_stock_label(windcode)
+    plabel = _mx_period_label(period)
+
+    q1 = f"{code} {plabel}营业收入 营业成本 扣非净利润 经营活动现金流净额 销售费用 管理费用 财务费用 研发费用"
+    q2 = f"{code} {plabel}总资产 总负债 净资产 流动资产 流动负债 存货 应收账款 预付款项"
+
+    merged: Dict[str, Optional[float]] = {}
+    for q in (q1, q2):
+        raw = _mx_query(q, timeout=45)
+        if raw:
+            parsed = _mx_parse_financials(raw)
+            for k, v in parsed.items():
+                if merged.get(k) is None:
+                    merged[k] = v
+
+    if len(merged) < 3:
+        return None
+    logger.info("MX Data full fetch: %d accounts for %s (%s)", len(merged), windcode, plabel)
+    return merged
+
+
+def _mx_supplement(
+    result: Dict[str, Optional[float]],
+    windcode: str,
+    period: str,
+) -> None:
+    """Supplement existing result dict with MX Data for missing accounts."""
+    missing = [a for a in _MX_ALL_ACCOUNTS if result.get(a) is None]
+    if not missing:
+        return
+
+    code = _mx_stock_label(windcode)
+    plabel = _mx_period_label(period)
+    query = f"{code} {plabel}" + " ".join(missing)
+
+    raw = _mx_query(query, timeout=45)
+    if not raw:
+        return
+    parsed = _mx_parse_financials(raw)
+    count = 0
+    for k, v in parsed.items():
+        if result.get(k) is None:
+            result[k] = v
+            count += 1
+    if count:
+        logger.info("MX Data supplement: filled %d missing accounts for %s", count, windcode)
+
+
+def _mx_fetch_prior_and_merge(
+    result: Dict[str, Optional[float]],
+    windcode: str,
+    period: str,
+) -> None:
+    """Fetch prior-period data from MX and merge as 上期/期初 keys."""
+    prior_label = _mx_prior_period_label(period)
+    code = _mx_stock_label(windcode)
+    query = f"{code} {prior_label}营业收入 应收账款 存货 净资产"
+
+    prior_rename = {
+        "营业收入": "上期营业收入",
+        "营业总收入": "上期营业收入",
+        "应收账款": "期初应收账款",
+        "应收账款及票据": "期初应收账款",
+        "存货": "期初存货",
+        "股东权益合计": "期初净资产",
+        "净资产": "期初净资产",
+    }
+
+    raw = _mx_query(query, timeout=45)
+    if not raw:
+        return
+    parsed = _mx_parse_financials(raw, rename_map=prior_rename)
+    count = 0
+    for k, v in parsed.items():
+        if result.get(k) is None:
+            result[k] = v
+            count += 1
+    if count:
+        logger.info("MX Data prior period: filled %d accounts for %s (%s)", count, windcode, prior_label)
+
+
+# ── Public API: Orchestrators (Wind → AKShare → MX Data fallback) ────────────
 
 def fetch_financials(
     windcode: str,
@@ -1786,7 +2037,7 @@ def fetch_financials(
 ) -> Optional[Dict[str, Optional[float]]]:
     """Fetch key financial accounts for a given stock.
 
-    Primary: Wind MCP → AKShare fallback.
+    Priority: Wind MCP → AKShare → MX Data, with selective supplement.
 
     Args:
         windcode: Wind-format stock code, e.g. "300750.SZ".
@@ -1814,13 +2065,21 @@ def fetch_financials(
             result = _ak_fetch_financials(windcode, period, timeout=timeout)
             if result:
                 logger.info("AKShare fallback: %d accounts for %s", len(result), windcode)
-                return result
         except Exception as e:
             logger.warning("AKShare fallback exception: %s", e)
-        logger.info("No financial data from Wind or AKShare for %s (%s)", windcode, period)
+
+    # Phase 2.5: MX Data full fetch (fallback when Wind+AKShare both failed)
+    if not result:
+        try:
+            result = _mx_fetch_financials(windcode, period)
+        except Exception as e:
+            logger.warning("MX Data fallback exception: %s", e)
+
+    if not result:
+        logger.info("No financial data from any source for %s (%s)", windcode, period)
         return None
 
-    # Phase 3: Supplement Wind data with AKShare for critical missing accounts
+    # Phase 3: Supplement with AKShare for critical missing accounts
     _CRITICAL_ACCOUNTS = ("扣非净利润", "经营活动现金流净额", "净资产")
     _PRIOR_ACCOUNTS = ("上期营业收入", "营业收入上期", "期初应收账款", "期初存货", "期初净资产")
     missing_critical = [a for a in _CRITICAL_ACCOUNTS if result.get(a) is None]
@@ -1839,6 +2098,19 @@ def fetch_financials(
             except Exception:
                 pass
         logger.info("Wind+AKShare supplement: %d accounts for %s", len(result), windcode)
+
+    # Phase 4: MX Data supplement for remaining gaps
+    try:
+        _mx_supplement(result, windcode, period)
+    except Exception:
+        pass
+
+    # Phase 4.5: MX prior period supplement
+    if not any(result.get(a) is not None for a in _PRIOR_ACCOUNTS):
+        try:
+            _mx_fetch_prior_and_merge(result, windcode, period)
+        except Exception:
+            pass
 
     return result
 

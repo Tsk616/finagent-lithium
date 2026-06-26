@@ -33,4 +33,6 @@ services:
         value: "2"
       - key: WIND_PEER_CODES
         value: "300750.SZ,002594.SZ,300014.SZ,688005.SH,002466.SZ"
+      - key: MX_APIKEY
+        sync: false
     plan: free
