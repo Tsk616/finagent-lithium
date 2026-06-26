@@ -437,7 +437,7 @@ def _normalize_required_accounts(
 
 
 def _add_derived_present_accounts(present: Set[str]) -> None:
-    """Mark average accounts present when their components are available."""
+    """Mark average and period-end accounts present when their components are available."""
     derivations = {
         "平均净资产": ("期初净资产", "期末净资产", "净资产"),
         "平均固定资产": ("期初固定资产", "期末固定资产", "固定资产"),
@@ -447,6 +447,16 @@ def _add_derived_present_accounts(present: Set[str]) -> None:
     for derived, components in derivations.items():
         begin_key, end_key, fallback_key = components
         if (begin_key in present and end_key in present) or fallback_key in present:
+            present.add(derived)
+
+    period_end_map = {
+        "期末存货": "存货",
+        "期末应收账款": "应收账款",
+        "期末净资产": "净资产",
+        "期末固定资产": "固定资产",
+    }
+    for derived, source in period_end_map.items():
+        if source in present:
             present.add(derived)
 
 

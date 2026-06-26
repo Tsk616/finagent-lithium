@@ -1980,7 +1980,7 @@ def _mx_supplement(
 
     code = _mx_stock_label(windcode)
     plabel = _mx_period_label(period)
-    query = f"{code} {plabel}" + " ".join(missing)
+    query = f"{code} {plabel} " + " ".join(missing)
 
     raw = _mx_query(query, timeout=45)
     if not raw:
