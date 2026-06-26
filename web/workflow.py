@@ -252,18 +252,44 @@ def run_pipeline(
     if not state.get("_lithium_trend") and not state.get("macro_context", {}).get("lithium_trend"):
         try:
             from nodes.llm_client import call_llm
+            sector_name = state.get("sector_level2") or "锂电池"
             macro_prompt = (
-                "你是一位锂电行业宏观分析师。请简要分析当前锂电池行业的宏观环境，包括："
-                "1. 碳酸锂价格走势及原因；2. 锂电池行业产能与需求趋势；"
-                "3. 新能源汽车市场对锂电的影响；4. 国内外政策环境。"
-                "用中文回答，200字以内，只陈述事实和趋势，不做投资建议。"
+                "你是一位锂电行业宏观分析师。请基于以下公司背景，分析该公司所处行业的宏观环境。\n\n"
+                "## 要求\n"
+                "用 JSON 格式输出，字段如下：\n"
+                "{\n"
+                '  "lithium_price_trend": "碳酸锂价格近期走势描述（含具体价格区间和涨跌幅）",\n'
+                '  "supply_demand": "锂电池上下游供需格局变化",\n'
+                '  "policy_environment": "影响行业的国内外政策（补贴、产能管控、出口关税等）",\n'
+                '  "industry_growth": "行业整体增速和产能利用率趋势",\n'
+                '  "impact_on_company": "以上宏观因素对该公司细分赛道的具体影响",\n'
+                '  "summary": "一段100-150字的综合宏观分析摘要"\n'
+                "}\n\n"
+                "## 约束\n"
+                "1. 只陈述可验证的事实和趋势，不做投资建议\n"
+                "2. 引用具体数字时标明来源年份/季度\n"
+                "3. 如果某个字段信息不足，写'暂无可靠数据'而非编造\n"
+                "4. 只输出 JSON，不要加 markdown 代码块"
             )
             macro_response = call_llm(
                 macro_prompt,
-                f"公司：{company_name}，行业：{state.get('sector_level2', '锂电池')}，报告期：{current_period}",
+                f"公司：{company_name}，细分赛道：{sector_name}，报告期：{current_period}",
+                config={"timeout": 20},
             )
             if macro_response and len(macro_response.strip()) > 30:
-                state["_deepseek_macro"] = macro_response.strip()
+                cleaned = macro_response.strip()
+                if cleaned.startswith("```"):
+                    cleaned = cleaned.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                try:
+                    macro_data = json.loads(cleaned)
+                    state["_deepseek_macro_structured"] = macro_data
+                    state["_deepseek_macro"] = macro_data.get("summary", cleaned)
+                    state["macro_context"].update({
+                        k: v for k, v in macro_data.items()
+                        if k != "summary" and v and v != "暂无可靠数据"
+                    })
+                except (ValueError, KeyError):
+                    state["_deepseek_macro"] = cleaned
         except Exception:
             pass
 

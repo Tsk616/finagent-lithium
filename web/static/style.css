@@ -1409,3 +1409,87 @@ input:focus, textarea:focus { outline: none; border-color: var(--blue-link); }
   line-height: 1.8;
   color: var(--text);
 }
+
+/* ── Macro cards grid ── */
+.macro-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.macro-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.macro-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--accent);
+}
+.macro-card-content {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+/* ── Industry comparison enhancements ── */
+.peer-table .num-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.peer-table .delta-positive { color: #16a34a; }
+.peer-table .delta-negative { color: #dc2626; }
+.peer-table tr:nth-child(even) { background: var(--bg-elevated); }
+.peer-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  z-index: 1;
+}
+
+/* ── History chat panel ── */
+.history-chat-panel {
+  display: none;
+  margin: 8px 0 12px 0;
+  padding: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.history-chat-panel.open { display: block; }
+.history-chat-messages {
+  max-height: 240px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+.history-chat-messages .chat-bubble {
+  margin: 4px 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 85%;
+}
+.history-chat-messages .chat-bubble.user {
+  background: var(--accent);
+  color: #fff;
+  margin-left: auto;
+}
+.history-chat-messages .chat-bubble.assistant {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+.history-chat-input-row {
+  display: flex;
+  gap: 6px;
+}
+.history-chat-input-row input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+}

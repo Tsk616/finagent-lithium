@@ -224,11 +224,14 @@
               <span>{{ item.current_period or "报告期未注明" }} · 完整度 {{ "%.0f"|format(item.data_completeness * 100) }}%{% if item.weighted_score is not none %} · 评分 {{ item.weighted_score }}{% endif %}</span>
               <small>{{ item.generated_at }}{% if item.sector %} · {{ item.sector }}{% endif %}</small>
             </a>
-            <div class="history-ask-inline">
-              <input type="text" class="history-ask-input" placeholder="快速追问..." data-report-id="{{ item.report_id }}">
-              <button type="button" class="btn-small" onclick="askFromHistory(this)">发送</button>
+            <button type="button" class="btn-small" onclick="toggleHistoryChat('{{ item.report_id }}')">💬 追问</button>
+            <div class="history-chat-panel" id="history-chat-{{ item.report_id }}" data-report-id="{{ item.report_id }}">
+              <div class="history-chat-messages" id="history-msgs-{{ item.report_id }}"></div>
+              <div class="history-chat-input-row">
+                <input type="text" placeholder="输入追问..." onkeydown="if(event.key==='Enter')sendHistoryChat('{{ item.report_id }}')">
+                <button type="button" class="btn-small" onclick="sendHistoryChat('{{ item.report_id }}')">发送</button>
+              </div>
             </div>
-            <div class="history-ask-answer" style="display:none;"></div>
           </div>
           {% endfor %}
         </div>

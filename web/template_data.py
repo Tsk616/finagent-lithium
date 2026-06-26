@@ -260,4 +260,5 @@ def build_template_data(state: dict) -> dict:
         "lithium_trend": state.get("_lithium_trend"),
         # DeepSeek macro fallback
         "deepseek_macro": state.get("_deepseek_macro", ""),
+        "deepseek_macro_structured": state.get("_deepseek_macro_structured"),
     }

@@ -244,38 +244,41 @@ function fetchPeerComparison() {
   });
 }
 
-// ── History inline ask ──
-function appendHistoryBubble(answerDiv, role, text) {
-  // On first message, switch to chat layout
-  if (!answerDiv.querySelector('.chat-bubble')) {
-    answerDiv.textContent = '';
-    answerDiv.style.maxHeight = '300px';
-    answerDiv.style.overflowY = 'auto';
+// ── History chat panel ──
+function toggleHistoryChat(reportId) {
+  var panel = document.getElementById('history-chat-' + reportId);
+  if (!panel) return;
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) {
+    var input = panel.querySelector('input');
+    if (input) input.focus();
   }
-  var bubble = document.createElement('div');
-  bubble.className = 'chat-bubble chat-' + role;
-  bubble.textContent = text;
-  answerDiv.appendChild(bubble);
-  answerDiv.scrollTop = answerDiv.scrollHeight;
 }
 
-function askFromHistory(btn) {
-  var wrap = btn.closest('.history-item-wrap');
-  var input = wrap.querySelector('.history-ask-input');
-  var answerDiv = wrap.querySelector('.history-ask-answer');
-  var question = input.value.trim();
-  var reportId = input.getAttribute('data-report-id');
-  if (!question || !reportId) return;
-  answerDiv.style.display = 'block';
+function appendHistoryChatBubble(reportId, role, text) {
+  var container = document.getElementById('history-msgs-' + reportId);
+  if (!container) return;
+  var bubble = document.createElement('div');
+  bubble.className = 'chat-bubble ' + role;
+  bubble.textContent = text;
+  container.appendChild(bubble);
+  container.scrollTop = container.scrollHeight;
+}
 
-  // Initialize conversation for this report if needed
+function sendHistoryChat(reportId) {
+  var panel = document.getElementById('history-chat-' + reportId);
+  if (!panel) return;
+  var input = panel.querySelector('input');
+  var question = input.value.trim();
+  if (!question) return;
+
   if (!historyConversations[reportId]) {
     historyConversations[reportId] = [];
   }
   historyConversations[reportId].push({role: 'user', content: question});
-  appendHistoryBubble(answerDiv, 'user', question);
+  appendHistoryChatBubble(reportId, 'user', question);
   input.value = '';
-  btn.disabled = true;
+  input.disabled = true;
 
   var controller = new AbortController();
   var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
@@ -296,8 +299,9 @@ function askFromHistory(btn) {
   }).then(function(data) {
     var answer = data.answer || data.message || '未生成回答。';
     historyConversations[reportId].push({role: 'assistant', content: answer});
-    appendHistoryBubble(answerDiv, 'assistant', answer);
-    btn.disabled = false;
+    appendHistoryChatBubble(reportId, 'assistant', answer);
+    input.disabled = false;
+    input.focus();
   }).catch(function(err) {
     var msg;
     if (err.name === 'AbortError') {
@@ -305,10 +309,9 @@ function askFromHistory(btn) {
     } else {
       msg = '追问失败：' + err.message;
     }
-    appendHistoryBubble(answerDiv, 'assistant', msg);
-    // Remove the unanswered user message from conversation
+    appendHistoryChatBubble(reportId, 'assistant', msg);
     historyConversations[reportId].pop();
-    btn.disabled = false;
+    input.disabled = false;
   });
 }
 
