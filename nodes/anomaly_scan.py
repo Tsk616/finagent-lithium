@@ -114,6 +114,58 @@ def _gv(indicators: Dict[str, dict], name: str) -> Optional[float]:
     return None
 
 
+def _normalize_macro_context(macro: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Normalize macro context from Wind or DeepSeek format into anomaly-rule format.
+
+    Target format: {"trend": "上涨"|"下跌"|"震荡", "change_3m_pct": float, "current": float}
+    """
+    if not macro:
+        return {}
+
+    # Wind format already has the right keys
+    if "trend" in macro and macro["trend"] in ("上涨", "下跌", "震荡"):
+        return macro
+
+    # Nested: {"lithium_trend": {"trend": ..., "change_3m_pct": ..., "current": ...}}
+    lt = macro.get("lithium_trend")
+    if isinstance(lt, dict) and "trend" in lt:
+        return lt
+
+    # DeepSeek text format — extract from Chinese text
+    result: Dict[str, Any] = {"trend": "震荡", "change_3m_pct": 0.0, "current": 0.0}
+
+    trend_text = ""
+    for key in ("lithium_price_trend", "lithium_trend", "supply_demand"):
+        val = macro.get(key)
+        if isinstance(val, str) and val != "暂无可靠数据":
+            trend_text += " " + val
+
+    if not trend_text:
+        return result
+
+    if any(kw in trend_text for kw in ("下跌", "下行", "走低", "下滑", "回落", "降价", "跌")):
+        result["trend"] = "下跌"
+    elif any(kw in trend_text for kw in ("上涨", "上行", "走高", "上升", "涨价", "反弹")):
+        result["trend"] = "上涨"
+
+    pct_match = re.search(r'[跌降涨升幅变动]+[约近]?\s*(\d+(?:\.\d+)?)\s*[%％]', trend_text)
+    if pct_match:
+        pct = float(pct_match.group(1))
+        if result["trend"] == "下跌":
+            pct = -pct
+        result["change_3m_pct"] = pct
+
+    price_match = re.search(r'(\d+(?:\.\d+)?)\s*万[元/]', trend_text)
+    if price_match:
+        result["current"] = float(price_match.group(1)) * 10000
+    else:
+        price_match2 = re.search(r'(\d{4,})\s*元/吨', trend_text)
+        if price_match2:
+            result["current"] = float(price_match2.group(1))
+
+    return result
+
+
 def _fmt_val(indicators: Dict[str, dict], name: str) -> str:
     """Format indicator value for description_template."""
     val = _gv(indicators, name)
@@ -194,9 +246,10 @@ def anomaly_scan(
         for code in set(codes_to_check):
             for rule in kb.get_anomaly_rules(code, include_external=True):
                 if rule.get("requires_external", False):
-                    if macro_context:
+                    normalized = _normalize_macro_context(macro_context)
+                    if normalized and normalized.get("trend"):
                         try:
-                            if _evaluate_external_rule(rule, all_indicators, macro_context):
+                            if _evaluate_external_rule(rule, all_indicators, normalized):
                                 signal = _build_kb_signal(rule, all_indicators)
                                 signal["_source"] = "external_macro"
                                 anomaly_signals.append(signal)
@@ -314,35 +367,73 @@ def _evaluate_external_rule(
     macro: Dict[str, Any],
 ) -> bool:
     """Evaluate an external-data-dependent anomaly rule using macro context."""
+    trend = macro.get("trend", "")
+    change_3m_pct = macro.get("change_3m_pct", 0) or 0
+
     check = rule.get("check", "")
-    if not check:
-        return False
+    if check:
+        try:
+            ctx: Dict[str, Any] = {}
+            for name, ind in indicators.items():
+                val = ind.get("value") if isinstance(ind, dict) else ind
+                if val is not None:
+                    safe_name = name.replace(" ", "_").replace("(", "").replace(")", "")
+                    ctx[safe_name] = float(val)
 
-    try:
-        ctx: Dict[str, Any] = {}
-        for name, ind in indicators.items():
-            val = ind.get("value") if isinstance(ind, dict) else ind
-            if val is not None:
-                safe_name = name.replace(" ", "_").replace("(", "").replace(")", "")
-                ctx[safe_name] = float(val)
+            ctx["external_lithium_price_drop"] = (
+                abs(change_3m_pct) if trend == "下跌" else 0.0
+            )
+            ctx["external_lithium_price_rise"] = (
+                change_3m_pct if trend == "上涨" else 0.0
+            )
+            ctx["lithium_price_change_3m"] = change_3m_pct
+            ctx["lithium_price_current"] = macro.get("current", 0) or 0
+            ctx["lithium_trend_up"] = 1 if trend == "上涨" else 0
+            ctx["lithium_trend_down"] = 1 if trend == "下跌" else 0
 
-        trend = macro.get("trend", "")
-        change_3m_pct = macro.get("change_3m_pct", 0) or 0
-        ctx["external_lithium_price_drop"] = (
-            abs(change_3m_pct) if trend == "下跌" else 0.0
-        )
-        ctx["external_lithium_price_rise"] = (
-            change_3m_pct if trend == "上涨" else 0.0
-        )
-        ctx["lithium_price_change_3m"] = change_3m_pct
-        ctx["lithium_price_current"] = macro.get("current", 0) or 0
-        ctx["lithium_trend_up"] = 1 if trend == "上涨" else 0
-        ctx["lithium_trend_down"] = 1 if trend == "下跌" else 0
+            # Map English variable names used in KB check expressions
+            inv = _gv(indicators, "存货")
+            inv_loss = _gv(indicators, "存货跌价损失")
+            if inv and inv > 0 and inv_loss is not None:
+                ctx["inventory_impairment_rate"] = inv_loss / inv * 100
+            else:
+                ctx["inventory_impairment_rate"] = 0.0
+            ctx["contract_liability_growth"] = _gv(indicators, "合同负债同比增速") or 0.0
+            ctx["inventory_turnover"] = _gv(indicators, "存货周转率") or 0.0
 
-        expr = check.replace("AND", " and ").replace("OR", " or ")
-        return bool(eval(expr, {"__builtins__": {}}, ctx))
-    except Exception:
-        return False
+            expr = check.replace("AND", " and ").replace("OR", " or ")
+            return bool(eval(expr, {"__builtins__": {}}, ctx))
+        except Exception:
+            return False
+
+    # No check expression — pattern-match on description/raw text
+    desc = f"{rule.get('description', '')} {rule.get('raw', '')}".lower()
+
+    # "锂价下跌 + 存货跌价损失低"
+    if ("锂价" in desc or "金属价格" in desc) and ("下跌" in desc or "下行" in desc):
+        if trend != "下跌" and change_3m_pct > -10:
+            return False
+        inv = _gv(indicators, "存货")
+        inv_loss = _gv(indicators, "存货跌价损失")
+        if inv and inv > 0 and inv_loss is not None:
+            if inv_loss / inv * 100 < 2.0:
+                return True
+
+    # "钴镍/金属价格上涨 + 毛利率不升反降"
+    if ("价格" in desc) and ("上涨" in desc or "上升" in desc) and "毛利" in desc:
+        if trend == "上涨" or change_3m_pct > 10:
+            margin = _gv(indicators, "销售毛利率")
+            if margin is not None and margin < 15:
+                return True
+
+    # "行业下滑 + 扩张在建工程"
+    if "行业" in desc and ("下滑" in desc or "下行" in desc or "装机量" in desc):
+        if trend == "下跌" or change_3m_pct < -5:
+            cip = _gv(indicators, "在建工程同比增速")
+            if cip is not None and cip > 30:
+                return True
+
+    return False
 
 
 def _build_kb_signal(rule: Dict, indicators: Dict[str, dict]) -> Dict:

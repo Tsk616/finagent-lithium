@@ -5,6 +5,7 @@ Orchestrates all 8 workflow nodes in sequence.
 Returns a complete AnalysisState dict ready for frontend rendering.
 """
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -160,6 +161,15 @@ def run_pipeline(
             wind_timeout = int(os.environ.get("WIND_FINANCIAL_TIMEOUT_SECONDS", "12"))
             wind_data = fetch_financials(windcode, period=current_period or "最新一期", timeout=wind_timeout)
             if wind_data:
+                # Supplement prior-period data via AKShare if Wind missed it
+                _prior_keys = ("上期营业收入", "营业收入上期", "期初应收账款", "应收账款上期", "期初存货", "存货上期")
+                if not any(wind_data.get(k) is not None for k in _prior_keys):
+                    try:
+                        from nodes.wind_adapter import _ak_extract_prior_period, _period_to_date
+                        _target = _period_to_date(current_period or "最新一期")
+                        _ak_extract_prior_period(wind_data, windcode, _target)
+                    except Exception:
+                        pass
                 # Merge: Wind data as base, user-provided data on top
                 merged = {**wind_data, **financial_data}
                 financial_data = merged
@@ -328,7 +338,7 @@ def run_pipeline(
         financial_data=financial_data,
         _sector_code=state.get("_sector_code"),
         sub_sectors=state.get("sub_sectors"), kb=KB,
-        macro_context=state.get("_lithium_trend"))
+        macro_context=state.get("_lithium_trend") or state.get("macro_context"))
     state["anomaly_signals"] = anomaly["anomaly_signals"]
     state["skipped_external_rules"] = anomaly.get("skipped_external_rules", 0)
 
