@@ -1494,3 +1494,195 @@ input:focus, textarea:focus { outline: none; border-color: var(--blue-link); }
   border-radius: 4px;
   font-size: 13px;
 }
+
+/* ── Phase 1: Trend charts ── */
+.cagr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.cagr-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+}
+.cagr-card.cagr-positive { border-left: 3px solid #67c23a; }
+.cagr-card.cagr-negative { border-left: 3px solid #f56c6c; }
+.cagr-metric { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.cagr-value { font-size: 24px; font-weight: 700; }
+.cagr-positive .cagr-value { color: #67c23a; }
+.cagr-negative .cagr-value { color: #f56c6c; }
+.cagr-detail { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+.chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.chart-title { font-size: 14px; font-weight: 600; margin: 0 0 12px 0; }
+.chart-container { width: 100%; height: 320px; }
+
+.inflection-alerts { margin-bottom: 16px; }
+.inflection-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+.inflection-alert.inflection-sign_reversal,
+.inflection-alert.inflection-deceleration {
+  border-left: 3px solid #f56c6c;
+}
+.inflection-alert.inflection-recovery,
+.inflection-alert.inflection-acceleration {
+  border-left: 3px solid #67c23a;
+}
+.inflection-period {
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  min-width: 60px;
+}
+.inflection-desc { color: var(--text-secondary); }
+
+.chart-footnote {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* ── Phase 2: Core ratio cards ── */
+.ratio-cards-section { margin-bottom: 20px; }
+.ratio-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.ratio-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ratio-card.risk-danger { border-left: 3px solid #f56c6c; }
+.ratio-card.risk-warning { border-left: 3px solid #e6a23c; }
+.ratio-card.risk-normal { border-left: 3px solid #67c23a; }
+.ratio-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ratio-icon { font-size: 16px; }
+.ratio-name { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+.ratio-value { font-size: 22px; font-weight: 700; color: var(--text-primary); }
+.ratio-risk { font-size: 12px; }
+.ratio-range { font-size: 11px; color: var(--text-muted); }
+.ratio-sparkline { width: 100%; height: 48px; margin-top: 4px; }
+
+/* ── Phase 2: Risk assessment panel ── */
+.risk-overview-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.risk-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 14px;
+}
+.risk-badge-stable { background: rgba(103,194,58,0.15); color: #67c23a; }
+.risk-badge-watch { background: rgba(230,162,60,0.15); color: #e6a23c; }
+.risk-badge-high_risk,
+.risk-badge-anomaly_detected { background: rgba(245,108,108,0.15); color: #f56c6c; }
+.risk-badge-icon { font-size: 18px; }
+.risk-summary-text { flex: 1; font-size: 14px; color: var(--text-secondary); min-width: 200px; }
+.risk-counters { display: flex; gap: 8px; flex-wrap: wrap; }
+.risk-counter {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.rc-danger { background: rgba(245,108,108,0.12); color: #f56c6c; }
+.rc-warning { background: rgba(230,162,60,0.12); color: #e6a23c; }
+.rc-normal { background: rgba(103,194,58,0.12); color: #67c23a; }
+
+.risk-items-section { margin-bottom: 16px; }
+.risk-items-title { font-size: 14px; font-weight: 600; margin: 0 0 10px 0; }
+.risk-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.risk-item-danger { border-left: 3px solid #f56c6c; }
+.risk-item-warning { border-left: 3px solid #e6a23c; }
+.risk-item-anomaly { border-left: 3px solid #f56c6c; }
+.risk-item-metric { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.risk-item-interp { font-size: 13px; color: var(--text-secondary); }
+.risk-item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.risk-item-severity { letter-spacing: -2px; }
+.risk-item-risk { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.risk-item-accounts { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Phase 4: AI Strategy Insights ── */
+.strategy-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.strategy-summary { grid-column: 1 / -1; }
+.strategy-card h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.strategy-card p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+.strategy-card ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+.strategy-risks ul { color: #f56c6c; }
+.strategy-outlook p { color: var(--text-primary); font-weight: 500; }
+
+/* compare page enhancements */
+.compare-unit { font-size: 11px; color: var(--text-muted); margin-left: 4px; }

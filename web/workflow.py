@@ -254,6 +254,20 @@ def run_pipeline(
         )
     )
 
+    # ── Historical data fetch (optional, for trend charts) ──
+    state["historical_data"] = {}
+    hist_years = int(os.environ.get("HISTORICAL_YEARS", "5"))
+    if stock_code and current_period and hist_years > 0:
+        try:
+            from nodes.historical_data import fetch_historical_periods
+            from nodes.wind_adapter import stock_code_to_windcode
+            windcode = stock_code_to_windcode(stock_code)
+            historical = fetch_historical_periods(windcode, current_period, years=hist_years)
+            if historical and historical.get("periods"):
+                state["historical_data"] = historical
+        except Exception as exc:
+            state["_historical_error"] = str(exc)
+
     # ── Wind: Macro + Peer context (optional) ──
     try:
         from nodes.wind_adapter import (
@@ -412,6 +426,36 @@ def run_pipeline(
         risk_summary=state.get("risk_summary"),
         llm_config=effective_llm_config)
     state["report_markdown"] = report["report_markdown"]
+
+    # ── AI strategy insights (optional, post-report) ──
+    state["strategy_insights"] = {}
+    if effective_llm_config and effective_llm_config.get("api_key", ""):
+        try:
+            from nodes.llm_client import call_llm
+            strategy_prompt = (
+                "你是资深行业分析师。基于以下财报分析报告，提取公司的战略方向和展望。\n\n"
+                "## 要求\n"
+                "返回 JSON，格式如下：\n"
+                "{\n"
+                '  "strategy_summary": "一段50-100字的战略方向总结",\n'
+                '  "key_strategies": ["战略要点1", "战略要点2", "战略要点3"],\n'
+                '  "outlook": "未来1-2年展望（50-80字）",\n'
+                '  "risks": ["关键风险1", "关键风险2"]\n'
+                "}\n\n"
+                "## 约束\n"
+                "1. 只基于报告内容提取，不编造未提及的信息\n"
+                "2. 战略要点最多5条，风险最多3条\n"
+                "3. 只输出 JSON，不加 markdown 代码块\n"
+            )
+            report_excerpt = state["report_markdown"][:3000]
+            resp = call_llm(strategy_prompt, report_excerpt, config={"timeout": 20})
+            if resp and len(resp.strip()) > 20:
+                cleaned = resp.strip()
+                if cleaned.startswith("```"):
+                    cleaned = cleaned.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                state["strategy_insights"] = json.loads(cleaned)
+        except Exception:
+            pass
 
     state["status"] = "completed"
     return state

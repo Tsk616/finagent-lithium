@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ company_name }} - FinAgent-Lithium 财报分析</title>
 <link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.plot.ly/plotly-basic-2.35.0.min.js" defer></script>
 </head>
 <body>
 <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -56,12 +57,12 @@
 <nav class="report-nav" aria-label="报告章节导航">
   <a href="#ch1-company">公司画像</a>
   <a href="#ch2-general">指标体检</a>
+  {% if has_historical %}<a href="#ch-trend">趋势分析</a>{% endif %}
   <a href="#ch4-linkage">联动诊断</a>
-  {% if has_anomalies %}
-  <a href="#ch5-anomaly">异常警报</a>
-  {% endif %}
+  {% if risk_assessment %}<a href="#ch-risk">风险评估</a>{% endif %}
   <a href="#ch5b-macro">宏观背景</a>
   <a href="#ch5c-peers">行业对标</a>
+  {% if has_strategy %}<a href="#ch-strategy">战略洞察</a>{% endif %}
   <a href="#ch6-summary">总结</a>
   <a href="#ch7-ask">追问交互</a>
 </nav>
@@ -79,6 +80,9 @@
     {% endif %}
   </div>
 </section>
+
+<!-- ── Core ratio cards (Phase 2) ── -->
+{% include 'partials/_ratio_cards.html' %}
 
 <!-- ── Integrated enterprise tab switcher ── -->
 {% if is_integrated and sector_tabs|length > 1 %}
@@ -209,6 +213,9 @@
 
 </section>
 
+<!-- ── Trend charts (Phase 1) ── -->
+{% include 'partials/_trend_charts.html' %}
+
 <!-- ── Chapter 3: Sector indicators ── -->
 {% for st in sector_tabs %}
 <section class="chapter sector-panel" id="ch3-sector-{{ loop.index0 }}" {% if is_integrated and not loop.first %}style="display:none"{% endif %}>
@@ -278,33 +285,8 @@
   {% endif %}
 </section>
 
-<!-- ── Chapter 5: Anomaly alerts ── -->
-{% if has_anomalies %}
-<section class="chapter" id="ch5-anomaly">
-  <h2 class="chapter-title">⚠️ 异常警报</h2>
-
-  <div class="anomaly-list">
-    {% for sig in anomaly_signals %}
-    <div class="anomaly-card" style="--sev: {{ sig.severity }}">
-      <div class="anomaly-header">
-        <span class="anomaly-severity-bar">
-          {% for _ in range(sig.severity) %}🔴{% endfor %}
-        </span>
-        <strong>{{ sig.rule_id }}</strong>
-        <span class="sev-label">严重度 {{ sig.severity }}/5</span>
-      </div>
-      <div class="anomaly-body">
-        <div><strong>表现：</strong>{{ sig.description }}</div>
-        <div><strong>风险：</strong>{{ sig.potential_risk }}</div>
-        {% if sig.suggested_accounts %}
-        <div><strong>建议核查科目：</strong>{{ sig.suggested_accounts|join('、') }}</div>
-        {% endif %}
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-</section>
-{% endif %}
+<!-- ── Risk assessment (Phase 2, replaces anomaly alerts) ── -->
+{% include 'partials/_risk_assessment.html' %}
 
   <!-- Macro context (always shown) -->
   <section class="chapter" id="ch5b-macro">
@@ -474,6 +456,9 @@
     <div class="empty-state">暂无行业对标数据。系统可通过 Wind API 自动获取同行数据进行对比。</div>
     {% endif %}
   </section>
+
+  <!-- ── AI Strategy Insights (Phase 4) ── -->
+  {% include 'partials/_strategy_insights.html' %}
 
   <!-- Chapter 6: Summary (investor perspective) -->
   <section class="chapter" id="ch6-summary">

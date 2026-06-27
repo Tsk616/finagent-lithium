@@ -1,0 +1,77 @@
+<!-- Risk assessment panel (Phase 2): aggregated risk overview -->
+{% if risk_assessment %}
+<section class="chapter" id="ch-risk">
+  <h2 class="chapter-title">🛡️ 风险评估</h2>
+
+  <!-- Risk level badge + summary -->
+  <div class="risk-overview-card">
+    <div class="risk-badge risk-badge-{{ risk_assessment.level }}">
+      <span class="risk-badge-icon">{{ risk_assessment.badge_icon }}</span>
+      <span class="risk-badge-text">{{ risk_assessment.badge_text }}</span>
+    </div>
+    <div class="risk-summary-text">{{ risk_assessment.summary }}</div>
+    <div class="risk-counters">
+      {% if risk_assessment.anomaly_count %}
+      <span class="risk-counter rc-danger">{{ risk_assessment.anomaly_count }} 异常</span>
+      {% endif %}
+      {% if risk_assessment.high_risk_count %}
+      <span class="risk-counter rc-danger">{{ risk_assessment.high_risk_count }} 高风险</span>
+      {% endif %}
+      {% if risk_assessment.warning_count %}
+      <span class="risk-counter rc-warning">{{ risk_assessment.warning_count }} 警惕</span>
+      {% endif %}
+      {% if not risk_assessment.anomaly_count and not risk_assessment.high_risk_count and not risk_assessment.warning_count %}
+      <span class="risk-counter rc-normal">无异常</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- High risk items -->
+  {% if risk_assessment.high_risk_items %}
+  <div class="risk-items-section">
+    <h3 class="risk-items-title">🔴 高风险指标</h3>
+    {% for item in risk_assessment.high_risk_items %}
+    <div class="risk-item risk-item-danger">
+      <div class="risk-item-metric">{{ item.metric }}</div>
+      <div class="risk-item-interp">{{ item.interpretation }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Warning items -->
+  {% if risk_assessment.warning_items %}
+  <div class="risk-items-section">
+    <h3 class="risk-items-title">🟡 警惕指标</h3>
+    {% for item in risk_assessment.warning_items %}
+    <div class="risk-item risk-item-warning">
+      <div class="risk-item-metric">{{ item.metric }}</div>
+      <div class="risk-item-interp">{{ item.interpretation }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Anomaly signals -->
+  {% if risk_assessment.anomalies %}
+  <div class="risk-items-section">
+    <h3 class="risk-items-title">⚠️ 异常信号</h3>
+    {% for sig in risk_assessment.anomalies %}
+    <div class="risk-item risk-item-anomaly">
+      <div class="risk-item-header">
+        <span class="risk-item-severity">
+          {% for _ in range(sig.severity) %}🔴{% endfor %}{% for _ in range(5 - sig.severity) %}⚪{% endfor %}
+        </span>
+        <strong>{{ sig.rule_id }}</strong>
+      </div>
+      <div class="risk-item-interp">{{ sig.description }}</div>
+      <div class="risk-item-risk">风险：{{ sig.potential_risk }}</div>
+      {% if sig.suggested_accounts %}
+      <div class="risk-item-accounts">建议核查：{{ sig.suggested_accounts|join('、') }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}

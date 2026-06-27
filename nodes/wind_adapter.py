@@ -1542,6 +1542,27 @@ def fetch_financials(
     return result
 
 
+def fetch_market_valuation(windcode: str, timeout: int = 10) -> Dict[str, Optional[float]]:
+    """Fetch market valuation metrics (PB, PE) via MX Data.
+
+    Returns:
+        Dict with keys: 市净率, 市盈率(动), values as floats or None.
+    """
+    result: Dict[str, Optional[float]] = {"市净率": None, "市盈率(动)": None}
+    code = _mx_stock_label(windcode)
+    raw = _mx_query(f"{code} 最新市净率 市盈率TTM", timeout=timeout)
+    if raw:
+        parsed = _mx_parse_financials(raw, rename_map={
+            "市净率": "市净率", "市净率PB": "市净率",
+            "市盈率TTM": "市盈率(动)", "市盈率(TTM)": "市盈率(动)",
+            "市盈率": "市盈率(动)",
+        })
+        for k, v in parsed.items():
+            if k in result:
+                result[k] = v
+    return result
+
+
 def fetch_company_info(windcode: str, timeout: int = 6) -> Optional[Dict[str, Any]]:
     """Fetch company basic info.
 

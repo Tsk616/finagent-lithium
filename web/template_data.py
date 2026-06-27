@@ -208,6 +208,21 @@ def build_template_data(state: dict) -> dict:
 
     anomalies = state.get("anomaly_signals", [])
 
+    # ── Core ratio cards (6 items) ──
+    core_ratios = _build_core_ratios(general_list, state.get("historical_data", {}))
+
+    # ── Risk assessment panel ──
+    risk_assessment = _build_risk_assessment(
+        state.get("risk_summary", {}),
+        anomalies,
+        state.get("metric_interpretations", []),
+    )
+
+    # ── Historical trend chart data ──
+    historical = state.get("historical_data", {})
+    has_historical = bool(historical.get("periods"))
+    chart_data = _build_chart_data(historical) if has_historical else {}
+
     return {
         "company_name": state.get("company_name", ""),
         "stock_code": state.get("stock_code", ""),
@@ -245,6 +260,9 @@ def build_template_data(state: dict) -> dict:
         "industry_benchmark_insights": state.get("industry_benchmark_insights", {}),
         "analysis_models": state.get("analysis_models", {}),
         "risk_summary": state.get("risk_summary", {}),
+        # Core ratio cards + risk assessment
+        "core_ratios": core_ratios,
+        "risk_assessment": risk_assessment,
         "wind_status": state.get("wind_status", {}),
         "wind_fetch_attempted": state.get("_wind_fetch_attempted", False),
         "wind_fetch_error": state.get("_wind_fetch_error", ""),
@@ -261,4 +279,130 @@ def build_template_data(state: dict) -> dict:
         # DeepSeek macro fallback
         "deepseek_macro": state.get("_deepseek_macro", ""),
         "deepseek_macro_structured": state.get("_deepseek_macro_structured"),
+        # Historical trend data
+        "historical_data": historical,
+        "has_historical": has_historical,
+        "chart_data": chart_data,
+        # AI strategy insights
+        "strategy_insights": state.get("strategy_insights", {}),
+        "has_strategy": bool(state.get("strategy_insights", {}).get("strategy_summary")),
+    }
+
+
+def _build_chart_data(historical: dict) -> dict:
+    """Transform historical data into Plotly-ready chart configurations."""
+    if not historical or not historical.get("periods"):
+        return {}
+    periods = historical["periods"]
+    labels = [p.replace("年报", "") for p in periods]
+
+    charts: dict = {}
+
+    revenue = historical.get("metrics", {}).get("营业收入", [])
+    profit = historical.get("metrics", {}).get("净利润", [])
+    if revenue:
+        charts["revenue_profit"] = {
+            "labels": labels,
+            "revenue": [round(v / 1e8, 2) if v else None for v in revenue],
+            "profit": [round(v / 1e8, 2) if v else None for v in profit] if profit else [],
+        }
+
+    ratios = historical.get("derived_ratios", {})
+    if ratios:
+        charts["ratios"] = {
+            "labels": labels,
+            "series": {
+                name: vals
+                for name, vals in ratios.items()
+                if any(v is not None for v in vals)
+            },
+        }
+
+    charts["cagr"] = historical.get("cagr", {})
+    charts["inflection_points"] = historical.get("inflection_points", [])
+
+    return charts
+
+
+_CORE_RATIO_NAMES = ["销售毛利率", "扣非销售净利率", "资产负债率", "流动比率", "扣非ROE", "净利润现金含量"]
+
+_CORE_RATIO_ICONS = {
+    "销售毛利率": "📊",
+    "扣非销售净利率": "💰",
+    "资产负债率": "⚖️",
+    "流动比率": "💧",
+    "扣非ROE": "🎯",
+    "净利润现金含量": "💵",
+}
+
+_RATIO_TO_HISTORICAL_KEY = {
+    "销售毛利率": "销售毛利率",
+    "资产负债率": "资产负债率",
+    "扣非ROE": "ROE",
+}
+
+
+def _build_core_ratios(general_list: list, historical: dict) -> list:
+    lookup = {ind["name"]: ind for ind in general_list}
+    derived_ratios = historical.get("derived_ratios", {})
+    periods = historical.get("periods", [])
+    sparkline_labels = [p.replace("年报", "") for p in periods]
+
+    result = []
+    for name in _CORE_RATIO_NAMES:
+        ind = lookup.get(name)
+        if not ind:
+            continue
+        card = {
+            "name": name,
+            "icon": _CORE_RATIO_ICONS.get(name, "📈"),
+            "value": ind.get("value"),
+            "risk_level": ind.get("risk_level", ""),
+            "risk_color": ind.get("risk_color", "pending"),
+            "normal_range": ind.get("normal_range", ""),
+            "formula": ind.get("formula", ""),
+            "sparkline": None,
+        }
+        hist_key = _RATIO_TO_HISTORICAL_KEY.get(name)
+        if hist_key and hist_key in derived_ratios:
+            vals = derived_ratios[hist_key]
+            if any(v is not None for v in vals):
+                card["sparkline"] = {"labels": sparkline_labels, "values": vals}
+        result.append(card)
+    return result
+
+
+def _build_risk_assessment(
+    risk_summary: dict,
+    anomalies: list,
+    metric_interpretations: list,
+) -> dict:
+    level = risk_summary.get("level", "unknown")
+    level_badge = {
+        "stable": ("🟢", "稳健"),
+        "watch": ("🟡", "关注"),
+        "high_risk": ("🔴", "高风险"),
+        "anomaly_detected": ("🔴", "异常检出"),
+    }.get(level, ("⚪", "未知"))
+
+    high_risk_items = [
+        item for item in metric_interpretations
+        if item.get("status") == "high_risk"
+    ]
+    warning_items = [
+        item for item in metric_interpretations
+        if item.get("status") == "warning"
+    ]
+
+    return {
+        "level": level,
+        "badge_icon": level_badge[0],
+        "badge_text": level_badge[1],
+        "summary": risk_summary.get("summary", ""),
+        "anomaly_count": len(anomalies),
+        "high_risk_count": len(high_risk_items),
+        "warning_count": len(warning_items),
+        "anomalies": anomalies,
+        "high_risk_items": high_risk_items,
+        "warning_items": warning_items,
     }

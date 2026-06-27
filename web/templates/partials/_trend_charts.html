@@ -1,0 +1,58 @@
+<!-- Trend charts partial (Phase 1): CAGR cards + Plotly interactive charts + inflection alerts -->
+{% if has_historical %}
+<section class="chapter" id="ch-trend">
+  <h2 class="chapter-title">📈 多年趋势分析</h2>
+
+  <!-- CAGR cards -->
+  {% if chart_data.cagr %}
+  <div class="cagr-grid">
+    {% for metric, data in chart_data.cagr.items() %}
+    <div class="cagr-card {{ 'cagr-positive' if data.value >= 0 else 'cagr-negative' }}">
+      <div class="cagr-metric">{{ metric }}</div>
+      <div class="cagr-value">{{ "%+.1f"|format(data.value) }}%</div>
+      <div class="cagr-detail">{{ data.years }}年复合增长率</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Revenue + profit bar/line chart -->
+  {% if chart_data.revenue_profit %}
+  <div class="chart-card">
+    <h3 class="chart-title">营业收入与净利润趋势</h3>
+    <div id="chart-revenue-profit" class="chart-container"></div>
+  </div>
+  {% endif %}
+
+  <!-- Key ratios line chart -->
+  {% if chart_data.ratios and chart_data.ratios.series %}
+  <div class="chart-card">
+    <h3 class="chart-title">关键财务比率变化</h3>
+    <div id="chart-ratios" class="chart-container"></div>
+  </div>
+  {% endif %}
+
+  <!-- Inflection point alerts -->
+  {% if chart_data.inflection_points %}
+  <div class="inflection-alerts">
+    <h3 class="chart-title">⚡ 趋势拐点检测</h3>
+    {% for point in chart_data.inflection_points %}
+    <div class="inflection-alert inflection-{{ point.type }}">
+      <span class="inflection-period">{{ point.period }}</span>
+      <span class="inflection-desc">{{ point.description }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Fetch status note -->
+  {% if historical_data.fetch_status and historical_data.fetch_status.failed_periods %}
+  <p class="chart-footnote">
+    ⚠ 以下年份数据获取失败：{{ historical_data.fetch_status.failed_periods|join('、') }}
+  </p>
+  {% endif %}
+</section>
+
+<!-- Chart data block for JS -->
+<script id="chart-data-json" type="application/json">{{ chart_data | tojson }}</script>
+{% endif %}

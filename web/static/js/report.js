@@ -110,3 +110,98 @@ function switchSubSector(idx) {
   var m = location.hash.match(/^#sector-(\d+)$/);
   if (m) switchSubSector(parseInt(m[1], 10));
 })();
+
+// ── Plotly trend charts initialization ──
+(function() {
+  var el = document.getElementById('chart-data-json');
+  if (!el) return;
+  var data;
+  try { data = JSON.parse(el.textContent); } catch(e) { return; }
+
+  var darkLayout = {
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'transparent',
+    font: { color: '#c0c4cc', family: 'system-ui, sans-serif', size: 12 },
+    margin: { t: 20, r: 20, b: 40, l: 60 },
+    legend: { orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
+    xaxis: { gridcolor: 'rgba(255,255,255,0.06)' },
+    yaxis: { gridcolor: 'rgba(255,255,255,0.06)' },
+  };
+  var plotConfig = { responsive: true, displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] };
+
+  function renderWhenReady() {
+    if (typeof Plotly === 'undefined') {
+      setTimeout(renderWhenReady, 200);
+      return;
+    }
+
+    if (data.revenue_profit && document.getElementById('chart-revenue-profit')) {
+      var rp = data.revenue_profit;
+      var traces = [{
+        x: rp.labels, y: rp.revenue, type: 'bar', name: '营业收入(亿)',
+        marker: { color: 'rgba(64,158,255,0.7)' }
+      }];
+      if (rp.profit && rp.profit.length) {
+        traces.push({
+          x: rp.labels, y: rp.profit, type: 'scatter', mode: 'lines+markers',
+          name: '净利润(亿)', yaxis: 'y2',
+          line: { color: '#f5a623', width: 2 },
+          marker: { size: 6 }
+        });
+      }
+      var layout = Object.assign({}, darkLayout, {
+        yaxis: Object.assign({}, darkLayout.yaxis, { title: '营业收入(亿元)' }),
+        yaxis2: { title: '净利润(亿元)', overlaying: 'y', side: 'right', gridcolor: 'rgba(255,255,255,0.03)', font: { color: '#f5a623' } },
+      });
+      Plotly.newPlot('chart-revenue-profit', traces, layout, plotConfig);
+    }
+
+    if (data.ratios && data.ratios.series && document.getElementById('chart-ratios')) {
+      var rt = data.ratios;
+      var colors = ['#409eff', '#f5a623', '#67c23a', '#e6a23c'];
+      var i = 0;
+      var ratioTraces = [];
+      for (var name in rt.series) {
+        ratioTraces.push({
+          x: rt.labels, y: rt.series[name], type: 'scatter', mode: 'lines+markers',
+          name: name, line: { color: colors[i % colors.length], width: 2 },
+          marker: { size: 5 }
+        });
+        i++;
+      }
+      var ratioLayout = Object.assign({}, darkLayout, {
+        yaxis: Object.assign({}, darkLayout.yaxis, { title: '百分比(%)' }),
+      });
+      Plotly.newPlot('chart-ratios', ratioTraces, ratioLayout, plotConfig);
+    }
+  }
+
+    // Sparklines in ratio cards
+    document.querySelectorAll('.ratio-sparkline').forEach(function(el) {
+      var labels, values;
+      try {
+        labels = JSON.parse(el.getAttribute('data-labels'));
+        values = JSON.parse(el.getAttribute('data-values'));
+      } catch(e) { return; }
+      if (!values || !values.length) return;
+
+      Plotly.newPlot(el, [{
+        x: labels, y: values, type: 'scatter', mode: 'lines',
+        line: { color: '#409eff', width: 1.5 },
+        fill: 'tozeroy', fillcolor: 'rgba(64,158,255,0.1)',
+      }], {
+        paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+        margin: { t: 2, r: 4, b: 14, l: 4 },
+        xaxis: { showgrid: false, tickfont: { size: 9, color: '#666' } },
+        yaxis: { showgrid: false, showticklabels: false },
+        showlegend: false,
+      }, { responsive: true, displayModeBar: false, staticPlot: true });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderWhenReady);
+  } else {
+    renderWhenReady();
+  }
+})();

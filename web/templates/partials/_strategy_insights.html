@@ -1,0 +1,44 @@
+<!-- AI Strategy Insights partial (Phase 4) -->
+{% if has_strategy %}
+<section class="chapter" id="ch-strategy">
+  <h2 class="chapter-title">🧭 AI 战略洞察</h2>
+
+  <div class="strategy-card">
+    <div class="strategy-summary">
+      <h3>战略方向</h3>
+      <p>{{ strategy_insights.strategy_summary }}</p>
+    </div>
+
+    {% if strategy_insights.key_strategies %}
+    <div class="strategy-points">
+      <h3>关键策略</h3>
+      <ul>
+        {% for s in strategy_insights.key_strategies %}
+        <li>{{ s }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if strategy_insights.outlook %}
+    <div class="strategy-outlook">
+      <h3>未来展望</h3>
+      <p>{{ strategy_insights.outlook }}</p>
+    </div>
+    {% endif %}
+
+    {% if strategy_insights.risks %}
+    <div class="strategy-risks">
+      <h3>关键风险</h3>
+      <ul>
+        {% for r in strategy_insights.risks %}
+        <li>{{ r }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+
+  <p class="chart-footnote">⚡ 战略洞察由 AI 基于分析报告自动提取，仅供参考</p>
+</section>
+{% endif %}

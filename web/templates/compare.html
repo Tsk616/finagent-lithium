@@ -5,19 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FinAgent-Lithium 同行对比</title>
 <link rel="stylesheet" href="/static/style.css">
+<script src="https://cdn.plot.ly/plotly-basic-2.35.0.min.js" defer></script>
 </head>
 <body>
 <div class="report-container">
   <header class="report-header">
     <h1>同行对比 <span class="stock-code">{{ comparison.peer_count }} 家公司</span></h1>
-    <div class="report-meta">横向指标表 + 最优/最差标记 + 雷达评分数据</div>
+    <div class="report-meta">{{ comparison.available_metric_count }} 项指标横向对比 + 雷达评分</div>
     <div class="header-actions">
       <a class="btn-download" href="/">返回数据上传</a>
     </div>
   </header>
 
+  <!-- 6-indicator comparison table -->
   <section class="chapter">
-    <h2 class="chapter-title">横向对比表</h2>
+    <h2 class="chapter-title">📊 指标横向对比</h2>
     {% if comparison.metric_table %}
     <div class="compare-table-wrap">
       <table class="compare-table">
@@ -36,16 +38,16 @@
           <tr>
             <td>
               <strong>{{ row.metric }}</strong>
-              {% if row.unit %}<span>{{ row.unit }}</span>{% endif %}
+              {% if row.unit %}<span class="compare-unit">{{ row.unit }}</span>{% endif %}
             </td>
             {% for cell in row.values %}
-            <td class="{% if cell.is_best %}best-cell{% elif cell.is_worst %}weak-cell{% endif %}">
+            <td class="num-cell {% if cell.is_best %}best-cell{% elif cell.is_worst %}weak-cell{% endif %}">
               {% if cell.value is not none %}{{ "%.2f"|format(cell.value) }}{% else %}-{% endif %}
               {% if cell.risk_level %}<small>{{ cell.risk_level }}</small>{% endif %}
             </td>
             {% endfor %}
-            <td>{{ row.best_company or "-" }}</td>
-            <td>{{ row.worst_company or "-" }}</td>
+            <td class="best-cell">{{ row.best_company or "-" }}</td>
+            <td class="weak-cell">{{ row.worst_company or "-" }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -56,8 +58,20 @@
     {% endif %}
   </section>
 
+  <!-- Plotly radar chart -->
   <section class="chapter">
-    <h2 class="chapter-title">雷达评分数据</h2>
+    <h2 class="chapter-title">🎯 能力雷达图</h2>
+    {% if comparison.radar %}
+    <div id="radar-chart" class="chart-container" style="height:400px;"></div>
+    <script id="radar-data-json" type="application/json">{{ comparison.radar | tojson }}</script>
+    {% else %}
+    <div class="empty-state">数据不足，无法生成雷达图。</div>
+    {% endif %}
+  </section>
+
+  <!-- Radar score breakdown -->
+  <section class="chapter">
+    <h2 class="chapter-title">📋 评分明细</h2>
     <div class="radar-grid">
       {% for peer in comparison.radar %}
       <div class="radar-card">
@@ -75,11 +89,61 @@
   </section>
 
   <section class="chapter">
-    <h2 class="chapter-title">数据说明</h2>
+    <h2 class="chapter-title">📝 数据说明</h2>
     <div class="summary-box">
-      本页仅基于上传文件中实际提取到的财务科目计算，不补造缺失值。若某家公司指标为空，通常说明对应报表科目未被提取或文件格式不支持。
+      本页仅基于上传文件中实际提取到的财务科目计算，不补造缺失值。若某家公司指标为空，通常说明对应报表科目未被提取或文件格式不支持。雷达评分为同组内相对排名（0-100），越高越优。
     </div>
   </section>
 </div>
+
+<script>
+(function() {
+  var el = document.getElementById('radar-data-json');
+  if (!el) return;
+  var radarData;
+  try { radarData = JSON.parse(el.textContent); } catch(e) { return; }
+
+  var colors = ['rgba(64,158,255,0.6)', 'rgba(245,166,35,0.6)', 'rgba(103,194,58,0.6)',
+                'rgba(230,162,60,0.6)', 'rgba(144,147,153,0.6)', 'rgba(245,108,108,0.6)',
+                'rgba(128,0,255,0.6)', 'rgba(0,206,209,0.6)'];
+
+  function renderRadar() {
+    if (typeof Plotly === 'undefined') { setTimeout(renderRadar, 200); return; }
+
+    var traces = [];
+    radarData.forEach(function(peer, i) {
+      var theta = peer.points.map(function(p) { return p.metric; });
+      var r = peer.points.map(function(p) { return p.score; });
+      theta.push(theta[0]);
+      r.push(r[0]);
+      traces.push({
+        type: 'scatterpolar', mode: 'lines+markers',
+        name: peer.company, r: r, theta: theta,
+        fill: 'toself', fillcolor: colors[i % colors.length].replace('0.6', '0.15'),
+        line: { color: colors[i % colors.length], width: 2 },
+        marker: { size: 5 },
+      });
+    });
+
+    Plotly.newPlot('radar-chart', traces, {
+      polar: {
+        bgcolor: 'transparent',
+        radialaxis: { visible: true, range: [0, 100], gridcolor: 'rgba(255,255,255,0.08)', tickfont: { size: 10, color: '#888' } },
+        angularaxis: { gridcolor: 'rgba(255,255,255,0.08)', tickfont: { size: 11, color: '#c0c4cc' } },
+      },
+      paper_bgcolor: 'transparent',
+      font: { color: '#c0c4cc' },
+      legend: { orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
+      margin: { t: 30, r: 40, b: 40, l: 40 },
+    }, { responsive: true, displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderRadar);
+  } else {
+    renderRadar();
+  }
+})();
+</script>
 </body>
 </html>

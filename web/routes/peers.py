@@ -63,7 +63,7 @@ def api_peer_compare():
         return jsonify({"status": "error", "message": "至少输入1个股票代码"}), 400
 
     try:
-        from nodes.wind_adapter import stock_code_to_windcode, fetch_financials
+        from nodes.wind_adapter import stock_code_to_windcode, fetch_financials, fetch_market_valuation
         peers = []
         for code in codes[:8]:
             windcode = stock_code_to_windcode(code)
@@ -88,11 +88,36 @@ def api_peer_compare():
                     peer["roe"] = f"{profit / equity * 100:.1f}%"
                 else:
                     peer["roe"] = "-"
+                # Net profit margin
+                if profit is not None and rev and rev != 0:
+                    peer["net_margin"] = f"{profit / rev * 100:.1f}%"
+                else:
+                    peer["net_margin"] = "-"
+                # Market valuation
+                val_data = {}
+                try:
+                    val_data = fetch_market_valuation(windcode, timeout=8)
+                except Exception:
+                    pass
+                pb = val_data.get("市净率")
+                pe = val_data.get("市盈率(动)")
+                peer["pb"] = f"{pb:.2f}" if pb is not None else "-"
+                peer["pe"] = f"{pe:.1f}" if pe is not None else "-"
+                # Store raw numeric values for radar chart
+                peer["_raw"] = {
+                    "ROE": (profit / equity * 100) if profit and equity and equity != 0 else None,
+                    "净资产": equity,
+                    "净利率": (profit / rev * 100) if profit is not None and rev and rev != 0 else None,
+                    "净利润": profit,
+                    "市净率": pb,
+                    "市盈率(动)": pe,
+                }
                 peers.append(peer)
             else:
                 peers.append({"windcode": windcode, "name": WINDCODE_NAME_MAP.get(windcode, windcode),
                               "revenue": "-", "profit": "-", "assets": "-", "equity": "-",
-                              "gross_margin": "-", "roe": "-"})
+                              "gross_margin": "-", "roe": "-", "net_margin": "-",
+                              "pb": "-", "pe": "-", "_raw": {}})
 
         return jsonify({"status": "ok", "peers": peers})
     except Exception as e:
