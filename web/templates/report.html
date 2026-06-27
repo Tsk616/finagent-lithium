@@ -118,6 +118,36 @@
   {% endif %}
 
 
+  <details class="raw-indicator-details">
+    <summary>查看通用指标明细</summary>
+    <div class="indicator-grid">
+    {% for ind in general_computable %}
+    <div class="ind-card risk-{{ ind.risk_color }}">
+      <div class="ind-header">
+        <span class="ind-name">{{ ind.name }}</span>
+        <span class="ind-risk">{{ ind.risk_level }}</span>
+      </div>
+      <div class="ind-value">{{ ind.value or "—" }}</div>
+      <div class="ind-range">正常: {{ ind.normal_range }}</div>
+      <div class="ind-explanation">{{ ind.explanation }}</div>
+      {% if interp_lookup.get(ind.name) %}<div class="ind-ai-note">💡 {{ interp_lookup[ind.name] }}</div>{% endif %}
+    </div>
+    {% endfor %}
+
+    {% for ind in general_pending %}
+    <div class="ind-card risk-pending">
+      <div class="ind-header">
+        <span class="ind-name">{{ ind.name }}</span>
+        <span class="ind-risk">{{ ind.risk_level }}</span>
+      </div>
+      <div class="ind-value muted">—</div>
+      <div class="ind-range">正常: {{ ind.normal_range }}（需上期数据）</div>
+      <div class="ind-explanation">{{ ind.explanation }}</div>
+    </div>
+    {% endfor %}
+    </div>
+  </details>
+
   {% if metric_blocks %}
   <div class="metric-block-grid">
     {% for block in metric_blocks %}
@@ -180,36 +210,6 @@
     {% endfor %}
   </div>
   {% endif %}
-
-  <details class="raw-indicator-details">
-    <summary>查看通用指标明细</summary>
-    <div class="indicator-grid">
-    {% for ind in general_computable %}
-    <div class="ind-card risk-{{ ind.risk_color }}">
-      <div class="ind-header">
-        <span class="ind-name">{{ ind.name }}</span>
-        <span class="ind-risk">{{ ind.risk_level }}</span>
-      </div>
-      <div class="ind-value">{{ ind.value or "—" }}</div>
-      <div class="ind-range">正常: {{ ind.normal_range }}</div>
-      <div class="ind-explanation">{{ ind.explanation }}</div>
-      {% if interp_lookup.get(ind.name) %}<div class="ind-ai-note">💡 {{ interp_lookup[ind.name] }}</div>{% endif %}
-    </div>
-    {% endfor %}
-
-    {% for ind in general_pending %}
-    <div class="ind-card risk-pending">
-      <div class="ind-header">
-        <span class="ind-name">{{ ind.name }}</span>
-        <span class="ind-risk">{{ ind.risk_level }}</span>
-      </div>
-      <div class="ind-value muted">—</div>
-      <div class="ind-range">正常: {{ ind.normal_range }}（需上期数据）</div>
-      <div class="ind-explanation">{{ ind.explanation }}</div>
-    </div>
-    {% endfor %}
-    </div>
-  </details>
 
 </section>
 
