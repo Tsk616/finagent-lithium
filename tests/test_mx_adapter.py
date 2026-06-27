@@ -213,12 +213,11 @@ def test_mx_parse_handles_empty_response():
     assert _mx_parse_financials({"data": {"data": {"searchDataResultDTO": {"dataTableDTOList": []}}}}) == {}
 
 
-def test_fetch_financials_tries_mx_when_wind_and_akshare_fail():
-    """fetch_financials falls through to MX when Wind and AKShare both fail."""
+def test_fetch_financials_tries_mx_when_wind_fails():
+    """fetch_financials falls through to MX when Wind fails."""
     from nodes.wind_adapter import fetch_financials
 
     with patch("nodes.wind_adapter._wind_fetch_financials", return_value=None), \
-         patch("nodes.wind_adapter._ak_fetch_financials", return_value=None), \
          patch("nodes.wind_adapter._mx_fetch_financials", return_value={"营业收入": 100.0, "营业成本": 50.0, "扣非净利润": 10.0}) as mx_mock, \
          patch("nodes.wind_adapter._mx_supplement"), \
          patch("nodes.wind_adapter._mx_fetch_prior_and_merge"):

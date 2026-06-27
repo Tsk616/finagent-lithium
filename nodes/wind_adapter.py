@@ -1,10 +1,9 @@
 """
-Market Data Adapter — Wind MCP primary + AKShare / MX Data fallback.
+Market Data Adapter — Wind MCP primary + MX Data fallback.
 
 Data sources (in priority order):
   1. Wind MCP (https://aifinmarket.wind.com.cn) — primary, via Node.js CLI subprocess
-  2. AKShare (Sina / East Money / THS) — graceful fallback on any Wind failure
-  3. MX Data (东方财富妙想 REST API) — fallback when AKShare unavailable
+  2. MX Data (东方财富妙想 REST API) — fallback when Wind unavailable
 
 All public function signatures remain unchanged — drop-in for web/workflow.py.
 
@@ -87,23 +86,6 @@ def stock_code_to_windcode(code: str) -> str:
     return f"{code}.SZ"
 
 
-def _windcode_to_sina(code: str) -> str:
-    """Convert windcode to Sina stock code format.
-
-    "300750.SZ" → "sz300750"
-    "688005.SH" → "sh688005"
-    """
-    code = code.strip()
-    if "." in code:
-        parts = code.split(".")
-        num = parts[0]
-        exchange = parts[1].lower()
-    else:
-        num = code
-        prefix3 = code[:3]
-        exchange = "sz" if prefix3 in _SZ_PREFIXES else "sh"
-    return f"{exchange}{num}"
-
 
 def _period_to_date(period: str) -> Optional[str]:
     """Convert report period label to Sina date format (YYYYMMDD).
@@ -134,94 +116,6 @@ def _period_to_date(period: str) -> Optional[str]:
 
 
 # ── Account name mappings ──────────────────────────────────────────────────
-
-# AKShare: Sina column name → canonical account name
-_SINA_TO_CANONICAL: Dict[str, str] = {
-    # Balance Sheet
-    "资产总计": "总资产",
-    "负债合计": "总负债",
-    "所有者权益(或股东权益)合计": "净资产",
-    "归属于母公司股东权益合计": "归母净资产",
-    "流动资产": "流动资产",
-    "流动资产合计": "流动资产",
-    "流动负债": "流动负债",
-    "流动负债合计": "流动负债",
-    "货币资金": "货币资金",
-    "应收账款": "应收账款",
-    "应收票据": "应收票据",
-    "应收票据及应收账款": "应收票据及应收账款",
-    "存货": "存货",
-    "固定资产净额": "固定资产",
-    "固定资产净值": "固定资产",
-    "固定资产原值": "固定资产原值",
-    "在建工程": "在建工程",
-    "在建工程合计": "在建工程",
-    "商誉": "商誉",
-    "无形资产": "无形资产",
-    "短期借款": "短期借款",
-    "长期借款": "长期借款",
-    "应付账款": "应付账款",
-    "应付票据": "应付票据",
-    "应付票据及应付账款": "应付票据及应付账款",
-    "预收款项": "预收款项",
-    "合同负债": "合同负债",
-    "长期应付款": "长期应付款",
-    "长期应付款合计": "长期应付款",
-    "交易性金融资产": "交易性金融资产",
-    "其他应收款": "其他应收款",
-    "其他流动资产": "其他流动资产",
-    "一年内到期的非流动资产": "一年内到期的非流动资产",
-    "递延所得税资产": "递延所得税资产",
-    "其他非流动资产": "其他非流动资产",
-    "应付职工薪酬": "应付职工薪酬",
-    "应交税费": "应交税费",
-    "其他应付款合计": "其他应付款合计",
-    "一年内到期的非流动负债": "一年内到期的非流动负债",
-    "其他流动负债": "其他流动负债",
-    "租赁负债": "租赁负债",
-    "长期递延收益": "长期递延收益",
-    "递延所得税负债": "递延所得税负债",
-    "实收资本(或股本)": "实收资本",
-    "资本公积": "资本公积",
-    "盈余公积": "盈余公积",
-    "未分配利润": "未分配利润",
-    "少数股东权益": "少数股东权益",
-    # Income Statement
-    "营业总收入": "营业收入",
-    "营业收入": "营业收入",
-    "营业总成本": "营业总成本",
-    "营业成本": "营业成本",
-    "研发费用": "研发费用",
-    "销售费用": "销售费用",
-    "管理费用": "管理费用",
-    "财务费用": "财务费用",
-    "利息费用": "利息费用",
-    "投资收益": "投资收益",
-    "资产减值损失": "资产减值损失",
-    "信用减值损失": "信用减值损失",
-    "公允价值变动收益": "公允价值变动收益",
-    "营业利润": "营业利润",
-    "利润总额": "利润总额",
-    "所得税费用": "所得税费用",
-    "净利润": "净利润",
-    "归属于母公司所有者的净利润": "归母净利润",
-    "少数股东损益": "少数股东损益",
-    "基本每股收益": "基本每股收益",
-    "稀释每股收益": "稀释每股收益",
-    "营业税金及附加": "营业税金及附加",
-    "其他收益": "其他收益",
-    "营业外收入": "营业外收入",
-    "营业外支出": "营业外支出",
-    "资产处置收益": "资产处置收益",
-    # Cash Flow
-    "经营活动产生的现金流量净额": "经营活动现金流净额",
-    "投资活动产生的现金流量净额": "投资活动现金流净额",
-    "筹资活动产生的现金流量净额": "筹资活动现金流净额",
-    "销售商品、提供劳务收到的现金": "销售商品提供劳务收到的现金",
-    "购建固定资产、无形资产和其他长期资产所支付的现金": "购建固定无形长期资产支付的现金",
-    "期末现金及现金等价物余额": "期末现金及现金等价物余额",
-    "现金及现金等价物净增加额": "现金及现金等价物净增加额",
-}
 
 # Wind NL response term → canonical account name
 _WIND_TERM_TO_CANONICAL: Dict[str, str] = {
@@ -307,7 +201,7 @@ _WIND_TERM_TO_CANONICAL: Dict[str, str] = {
 
 # ── Wind MCP CLI subprocess helper ──────────────────────────────────────────
 
-# Wind error codes that trigger AKShare fallback (all codes)
+# Wind error codes that trigger MX Data fallback
 _WIND_FALLBACK_CODES = {
     "QUOTA_ERROR", "AUTH_ERROR", "NETWORK_ERROR",
     "TEMPORARILY_UNAVAILABLE", "TOOL_RUNTIME_ERROR",
@@ -513,7 +407,7 @@ def _check_node_available() -> bool:
         except (FileNotFoundError, subprocess.TimeoutExpired):
             _node_available = False
         if not _node_available:
-            logger.warning("Node.js not found — Wind MCP unavailable, using AKShare for all data")
+            logger.warning("Node.js not found — Wind MCP unavailable, using MX Data for all data")
     return _node_available
 
 
@@ -787,15 +681,8 @@ def _parse_wind_financial_text(
             return None
         canonical = _WIND_TERM_TO_CANONICAL.get(term)
         if canonical is None:
-            canonical = _ak_resolve_sina_account(term)
-        if canonical is None:
             for wind_term, canon in _WIND_TERM_TO_CANONICAL.items():
                 if wind_term in term or term in wind_term:
-                    canonical = canon
-                    break
-        if canonical is None:
-            for sina_term, canon in _SINA_TO_CANONICAL.items():
-                if sina_term in term or term in sina_term:
                     canonical = canon
                     break
         return _period_aware_canonical(term, canonical)
@@ -1323,365 +1210,7 @@ def _wind_fetch_macro_context(timeout: int = 60) -> Optional[Dict[str, Any]]:
     return parsed if parsed else None
 
 
-# ── AKShare implementations (private, renamed from originals) ───────────────
-
-def _ak_retry_call(fn, *args, max_retries: int = 3, delay: float = 2.0, **kwargs) -> Any:
-    """Call a function with retry on connection errors."""
-    last_err = None
-    for attempt in range(max_retries):
-        try:
-            return fn(*args, **kwargs)
-        except Exception as e:
-            last_err = e
-            if attempt < max_retries - 1:
-                logger.debug("AKShare call attempt %d failed: %s — retrying...",
-                             attempt + 1, e)
-                time.sleep(delay * (attempt + 1))
-    logger.warning("AKShare call failed after %d attempts: %s", max_retries, last_err)
-    return None
-
-
-def _ak_resolve_sina_account(sina_col: str) -> Optional[str]:
-    """Map a Sina financial report column name to canonical account name."""
-    if sina_col in _SINA_TO_CANONICAL:
-        return _SINA_TO_CANONICAL[sina_col]
-    for key, canonical in _SINA_TO_CANONICAL.items():
-        if key in sina_col or sina_col in key:
-            return canonical
-    return None
-
-
-def _ak_parse_ths_value(raw: Any) -> Optional[float]:
-    """Parse THS value which may have unit suffix like '207.38亿', '16.14', '48.52%'."""
-    if raw is None:
-        return None
-    try:
-        return float(raw)
-    except (ValueError, TypeError):
-        pass
-
-    s = str(raw).strip()
-    if not s:
-        return None
-
-    m = re.match(r'([+-]?\d+\.?\d*)\s*(亿|万|万亿|%)?', s)
-    if not m:
-        return None
-
-    num = float(m.group(1))
-    unit = m.group(2) or ""
-    multipliers = {"亿": 1e8, "万": 1e4, "万亿": 1e12, "%": 1.0}
-    return num * multipliers.get(unit, 1.0)
-
-
-def _ak_extract_prior_period(
-    result: Dict[str, Optional[float]],
-    windcode: str,
-    target_date: Optional[str],
-) -> None:
-    """Extract prior-period data from Sina for growth-rate / average indicators.
-
-    Adds accounts like: 上期营业收入, 期初应收账款, 期初存货, 期初净资产, etc.
-    """
-    sina_code = _windcode_to_sina(windcode)
-    if not target_date:
-        return
-
-    try:
-        year = int(target_date[:4])
-        month_day = target_date[4:]
-        prior_date = f"{year - 1}{month_day}"
-    except (ValueError, IndexError):
-        return
-
-    _PRIOR_ACCOUNTS = {
-        "营业收入": "上期营业收入",
-        "营业成本": "上期营业成本",
-        "研发费用": "上期研发费用",
-        "净利润": "上期净利润",
-        "应收账款": "期初应收账款",
-        "应收票据及应收账款": "期初应收账款",
-        "存货": "期初存货",
-        "固定资产净额": "期初固定资产",
-        "在建工程合计": "期初在建工程",
-        "在建工程": "期初在建工程",
-        "合同负债": "期初合同负债",
-        "资产总计": "期初总资产",
-        "负债合计": "期初总负债",
-        "所有者权益(或股东权益)合计": "期初净资产",
-        "流动资产合计": "期初流动资产",
-        "流动负债合计": "期初流动负债",
-        "短期借款": "期初短期借款",
-        "长期借款": "期初长期借款",
-        "应付账款": "期初应付账款",
-        "预收款项": "期初预收款项",
-        "应收票据": "期初应收票据",
-    }
-
-    for symbol in ["资产负债表", "利润表"]:
-        try:
-            import akshare as ak
-            df = _ak_retry_call(
-                ak.stock_financial_report_sina,
-                stock=sina_code, symbol=symbol, max_retries=2, delay=1.5,
-            )
-        except Exception:
-            continue
-
-        if df is None or df.empty:
-            continue
-
-        dates = df["报告日"].astype(str)
-        row_idx = None
-        for i, d in enumerate(dates):
-            if str(d) == prior_date:
-                row_idx = i
-                break
-        if row_idx is None:
-            for i, d in enumerate(dates):
-                if str(d) <= prior_date:
-                    row_idx = i
-                    break
-
-        if row_idx is None or row_idx >= len(df):
-            continue
-
-        row = df.iloc[row_idx]
-
-        for col_name in df.columns:
-            if col_name in ("报告日", "数据源", "是否审计", "公告日期", "币种", "类型", "更新日期"):
-                continue
-            if col_name not in _PRIOR_ACCOUNTS:
-                continue
-
-            prior_key = _PRIOR_ACCOUNTS[col_name]
-            if prior_key in result and result[prior_key] is not None:
-                continue
-
-            val = row[col_name]
-            try:
-                val_f = float(val)
-                if val_f == val_f:
-                    result[prior_key] = val_f
-            except (ValueError, TypeError):
-                continue
-
-    # Add 期末* aliases
-    _ENDING_ALIASES = {
-        "应收账款": "期末应收账款",
-        "存货": "期末存货",
-        "固定资产": "期末固定资产",
-        "在建工程": "期末在建工程",
-        "合同负债": "期末合同负债",
-        "总资产": "期末总资产",
-        "总负债": "期末总负债",
-        "净资产": "期末净资产",
-        "流动资产": "期末流动资产",
-        "流动负债": "期末流动负债",
-    }
-    for cur_key, end_key in _ENDING_ALIASES.items():
-        if cur_key in result and result[cur_key] is not None:
-            if end_key not in result or result[end_key] is None:
-                result[end_key] = result[cur_key]
-
-    if "上期营业收入" in result and result["上期营业收入"] is not None:
-        if "上期营收" not in result:
-            result["上期营收"] = result["上期营业收入"]
-
-
-def _ak_supplement_ths(
-    result: Dict[str, Optional[float]],
-    windcode: str,
-    target_date: Optional[str],
-) -> None:
-    """Supplement financial data with THS abstract for 扣非净利润."""
-    plain_code = windcode.replace(".SZ", "").replace(".SH", "").replace(".BJ", "")
-
-    try:
-        import akshare as ak
-        df = _ak_retry_call(
-            ak.stock_financial_abstract_ths,
-            symbol=plain_code, indicator='按报告期', max_retries=2, delay=1.5,
-        )
-    except Exception:
-        return
-
-    if df is None or df.empty:
-        return
-
-    ths_target = None
-    if target_date:
-        ths_target = f"{target_date[:4]}-{target_date[4:6]}-{target_date[6:8]}"
-
-    try:
-        dates = df['报告期'].astype(str)
-        row_idx = None
-        if ths_target:
-            for i, d in enumerate(dates):
-                if str(d) == ths_target:
-                    row_idx = i
-                    break
-            if row_idx is None:
-                for i, d in enumerate(dates):
-                    if str(d) <= ths_target:
-                        row_idx = i
-                        break
-        if row_idx is None:
-            row_idx = len(df) - 1
-
-        if row_idx >= len(df):
-            return
-
-        row = df.iloc[row_idx]
-
-        _THS_COLUMNS = {
-            "扣非净利润": "扣非净利润",
-            "净利润": "归母净利润",
-            "营业总收入": "营业收入",
-            "营业收入": "营业收入",
-            "基本每股收益": "基本每股收益",
-            "每股收益": "基本每股收益",
-            "净资产收益率": "ROE",
-            "每股净资产": "每股净资产",
-        }
-
-        for ths_col, canonical in _THS_COLUMNS.items():
-            # Exact match first, then fuzzy (column name contains key)
-            matched_col = None
-            if ths_col in df.columns:
-                matched_col = ths_col
-            else:
-                for c in df.columns:
-                    if ths_col in str(c):
-                        matched_col = c
-                        break
-            if matched_col is None:
-                continue
-            if canonical in result and result[canonical] is not None:
-                continue
-
-            raw = row[matched_col]
-            val = _ak_parse_ths_value(raw)
-            if val is not None:
-                result[canonical] = val
-
-    except (KeyError, IndexError, TypeError) as e:
-        logger.debug("Failed to parse THS data: %s", e)
-
-
-def _ak_fetch_financials(
-    windcode: str,
-    period: str = "最新一期",
-    timeout: int = 30,
-) -> Optional[Dict[str, Optional[float]]]:
-    """Fetch key financial accounts for a given stock via AKShare/Sina Finance."""
-    sina_code = _windcode_to_sina(windcode)
-    target_date = _period_to_date(period)
-
-    result: Dict[str, Optional[float]] = {}
-
-    for symbol, label in [("资产负债表", "BS"), ("利润表", "PL"), ("现金流量表", "CF")]:
-        try:
-            import akshare as ak
-            df = _ak_retry_call(
-                ak.stock_financial_report_sina,
-                stock=sina_code, symbol=symbol, max_retries=2, delay=1.5,
-            )
-        except Exception as e:
-            logger.debug("AKShare not available for %s: %s", label, e)
-            continue
-
-        if df is None or df.empty:
-            continue
-
-        if target_date:
-            dates = df["报告日"].astype(str)
-            row_idx = None
-            for i, d in enumerate(dates):
-                if str(d) == target_date:
-                    row_idx = i
-                    break
-            if row_idx is None:
-                for i, d in enumerate(dates):
-                    if str(d) <= target_date:
-                        row_idx = i
-                        break
-                if row_idx is None:
-                    row_idx = 0
-        else:
-            row_idx = 0
-
-        if row_idx >= len(df):
-            continue
-
-        row = df.iloc[row_idx]
-
-        for col_name in df.columns:
-            if col_name in ("报告日", "数据源", "是否审计", "公告日期", "币种", "类型", "更新日期"):
-                continue
-
-            canonical = _ak_resolve_sina_account(col_name)
-            if canonical is None:
-                continue
-
-            val = row[col_name]
-            try:
-                val_f = float(val)
-                if val_f != val_f:
-                    continue
-                if canonical not in result or result[canonical] is None:
-                    result[canonical] = val_f
-            except (ValueError, TypeError):
-                continue
-
-    if not result:
-        return None
-
-    _ak_extract_prior_period(result, windcode, target_date)
-    _ak_supplement_ths(result, windcode, target_date)
-
-    if "营业收入" in result and "营业成本" in result:
-        rev = result["营业收入"]
-        cost = result["营业成本"]
-        if rev is not None and cost is not None:
-            result["毛利"] = rev - cost
-
-    return result
-
-
-def _ak_fetch_company_info(windcode: str, timeout: int = 30) -> Optional[Dict[str, Any]]:
-    """Fetch company basic info from East Money via AKShare."""
-    plain_code = windcode.replace(".SZ", "").replace(".SH", "").replace(".BJ", "")
-
-    try:
-        import akshare as ak
-        df = _ak_retry_call(ak.stock_individual_info_em, symbol=plain_code, max_retries=2)
-    except Exception:
-        df = None
-
-    if df is None or df.empty:
-        return None
-
-    try:
-        info: Dict[str, Any] = {"windcode": windcode}
-        for _, row in df.iterrows():
-            item = str(row.iloc[0])
-            value = row.iloc[1]
-            if "简称" in item or "名称" in item:
-                info["name"] = str(value)
-            elif "行业" in item:
-                info["industry"] = str(value)
-            elif "主营" in item or "业务" in item:
-                info["business"] = str(value)
-            elif "上市" in item:
-                info["listing_date"] = str(value)
-            elif "板块" in item or "板" in item:
-                info["exchange"] = str(value)
-        return info if info.get("name") else None
-    except (KeyError, IndexError, TypeError) as e:
-        logger.debug("Failed to parse company info: %s", e)
-        return None
-
+# ── Hardcoded fallback data ───────────────────────────────────────────────
 
 # Hardcoded lithium battery peer list as ultimate fallback
 _LITHIUM_PEERS_FALLBACK = [
@@ -1701,81 +1230,6 @@ _LITHIUM_PEERS_FALLBACK = [
     "002008.SZ",  # 大族激光
     "600482.SH",  # 中国动力
 ]
-
-
-def _ak_search_lithium_peers(timeout: int = 30) -> Optional[List[str]]:
-    """Search for lithium battery industry peer stocks via AKShare/East Money concept board."""
-    try:
-        import akshare as ak
-
-        df_boards = _ak_retry_call(ak.stock_board_concept_name_em, max_retries=2)
-        if df_boards is not None and not df_boards.empty:
-            lith_row = df_boards[df_boards['板块名称'] == '锂电池']
-            if len(lith_row) > 0:
-                board_code = lith_row.iloc[0]['板块编码']
-                df_cons = _ak_retry_call(
-                    ak.stock_board_concept_cons_em,
-                    symbol=board_code, max_retries=2,
-                )
-                if df_cons is not None and not df_cons.empty:
-                    windcodes = []
-                    for _, row in df_cons.iterrows():
-                        code = str(row.get('代码', ''))
-                        if code:
-                            windcodes.append(stock_code_to_windcode(code))
-                    if windcodes:
-                        return windcodes
-
-        if df_boards is not None and not df_boards.empty:
-            related = df_boards[df_boards['板块名称'].str.contains(
-                '锂|电池|新能源车', case=False, na=False
-            )]
-            if not related.empty:
-                largest = related.nlargest(1, '个股数量').iloc[0]
-                df_cons = _ak_retry_call(
-                    ak.stock_board_concept_cons_em,
-                    symbol=largest['板块编码'], max_retries=2,
-                )
-                if df_cons is not None and not df_cons.empty:
-                    windcodes = []
-                    for _, row in df_cons.iterrows():
-                        code = str(row.get('代码', ''))
-                        if code:
-                            windcodes.append(stock_code_to_windcode(code))
-                    if windcodes:
-                        return windcodes
-    except Exception as e:
-        logger.debug("Concept board search failed: %s", e)
-
-    logger.debug("Using hardcoded lithium peer list (AKShare network unavailable)")
-    return list(_LITHIUM_PEERS_FALLBACK)
-
-
-def _ak_fetch_macro_context(timeout: int = 30) -> Optional[Dict[str, Any]]:
-    """Fetch lithium carbonate futures data via AKShare/Sina Futures."""
-    try:
-        import akshare as ak
-        df = _ak_retry_call(ak.futures_main_sina, symbol='LC0', max_retries=2)
-    except Exception:
-        df = None
-
-    if df is None or df.empty:
-        return None
-
-    try:
-        dates = df['日期'].astype(str).tolist()
-        values = df['收盘价'].astype(float).tolist()
-        return {
-            "碳酸锂期货": {
-                "dates": dates,
-                "values": values,
-                "unit": "元/吨",
-                "name": "碳酸锂期货主力合约",
-            }
-        }
-    except (KeyError, TypeError) as e:
-        logger.debug("Failed to parse futures data: %s", e)
-        return None
 
 
 # ── MX Data (东方财富妙想) implementations ────────────────────────────────────
@@ -2028,7 +1482,7 @@ def _mx_fetch_prior_and_merge(
         logger.info("MX Data prior period: filled %d accounts for %s (%s)", count, windcode, prior_label)
 
 
-# ── Public API: Orchestrators (Wind → AKShare → MX Data fallback) ────────────
+# ── Public API: Orchestrators (Wind → MX Data fallback) ──────────────────────
 
 def fetch_financials(
     windcode: str,
@@ -2037,7 +1491,7 @@ def fetch_financials(
 ) -> Optional[Dict[str, Optional[float]]]:
     """Fetch key financial accounts for a given stock.
 
-    Priority: Wind MCP → AKShare → MX Data, with selective supplement.
+    Priority: Wind MCP → MX Data, with selective supplement.
 
     Args:
         windcode: Wind-format stock code, e.g. "300750.SZ".
@@ -2048,6 +1502,8 @@ def fetch_financials(
         Dict mapping canonical Chinese account names to float values in 元,
         or None if data cannot be fetched.
     """
+    _PRIOR_ACCOUNTS = ("上期营业收入", "营业收入上期", "期初应收账款", "期初存货", "期初净资产")
+
     # Phase 1: Wind MCP (primary)
     result = None
     try:
@@ -2059,16 +1515,7 @@ def fetch_financials(
     except Exception as e:
         logger.warning("Wind MCP fetch_financials exception: %s", e)
 
-    # Phase 2: AKShare full fetch (fallback when Wind returned nothing)
-    if not result:
-        try:
-            result = _ak_fetch_financials(windcode, period, timeout=timeout)
-            if result:
-                logger.info("AKShare fallback: %d accounts for %s", len(result), windcode)
-        except Exception as e:
-            logger.warning("AKShare fallback exception: %s", e)
-
-    # Phase 2.5: MX Data full fetch (fallback when Wind+AKShare both failed)
+    # Phase 2: MX Data full fetch (fallback when Wind returned nothing)
     if not result:
         try:
             result = _mx_fetch_financials(windcode, period)
@@ -2079,33 +1526,13 @@ def fetch_financials(
         logger.info("No financial data from any source for %s (%s)", windcode, period)
         return None
 
-    # Phase 3: Supplement with AKShare for critical missing accounts
-    _CRITICAL_ACCOUNTS = ("扣非净利润", "经营活动现金流净额", "净资产")
-    _PRIOR_ACCOUNTS = ("上期营业收入", "营业收入上期", "期初应收账款", "期初存货", "期初净资产")
-    missing_critical = [a for a in _CRITICAL_ACCOUNTS if result.get(a) is None]
-    missing_prior = not any(result.get(a) is not None for a in _PRIOR_ACCOUNTS)
-
-    if missing_critical or missing_prior:
-        target_date = _period_to_date(period)
-        if missing_critical:
-            try:
-                _ak_supplement_ths(result, windcode, target_date)
-            except Exception:
-                pass
-        if missing_prior:
-            try:
-                _ak_extract_prior_period(result, windcode, target_date)
-            except Exception:
-                pass
-        logger.info("Wind+AKShare supplement: %d accounts for %s", len(result), windcode)
-
-    # Phase 4: MX Data supplement for remaining gaps
+    # Phase 3: MX Data supplement for remaining gaps
     try:
         _mx_supplement(result, windcode, period)
     except Exception:
         pass
 
-    # Phase 4.5: MX prior period supplement
+    # Phase 3.5: MX prior period supplement
     if not any(result.get(a) is not None for a in _PRIOR_ACCOUNTS):
         try:
             _mx_fetch_prior_and_merge(result, windcode, period)
@@ -2118,7 +1545,7 @@ def fetch_financials(
 def fetch_company_info(windcode: str, timeout: int = 6) -> Optional[Dict[str, Any]]:
     """Fetch company basic info.
 
-    Primary: Wind MCP → AKShare fallback.
+    Primary: Wind MCP.
 
     Returns:
         Dict with keys: name, industry, business, exchange, listing_date
@@ -2166,7 +1593,7 @@ def extract_business_keywords(info: Optional[Dict[str, Any]]) -> List[str]:
 def search_lithium_peers(timeout: int = 6) -> Optional[List[str]]:
     """Search for lithium battery industry peer stocks.
 
-    Primary: Wind MCP → AKShare concept board → hardcoded fallback.
+    Primary: Wind MCP → hardcoded fallback.
 
     Returns:
         List of windcodes like ["300750.SZ", "002466.SZ", ...].
@@ -2180,9 +1607,9 @@ def search_lithium_peers(timeout: int = 6) -> Optional[List[str]]:
     except Exception as e:
         logger.warning("Wind MCP search_lithium_peers exception: %s", e)
 
-    # Phase 2: AKShare (with built-in hardcoded fallback)
-    logger.info("Wind-only search_lithium_peers returned no data")
-    return None
+    # Phase 2: Hardcoded fallback
+    logger.info("Wind search_lithium_peers returned no data, using hardcoded list")
+    return list(_LITHIUM_PEERS_FALLBACK)
 
 
 def fetch_peers_financials(
@@ -2225,7 +1652,7 @@ def fetch_peers_financials(
 def fetch_macro_context(timeout: int = 6) -> Optional[Dict[str, Any]]:
     """Fetch lithium carbonate futures/market data as macro context.
 
-    Primary: Wind MCP → AKShare fallback.
+    Primary: Wind MCP.
 
     Returns:
         Dict with "碳酸锂期货" key containing dates, values, unit.
@@ -2313,21 +1740,20 @@ def get_lithium_price_trend(
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
-    print("=== Wind MCP + AKShare Market Data Adapter Self-Test ===\n")
+    print("=== Wind MCP + MX Data Market Data Adapter Self-Test ===\n")
 
     # 1. Code conversion
     print("1. Code conversion:")
     for code in ["300750", "688005", "002466", "600519"]:
         wc = stock_code_to_windcode(code)
-        sc = _windcode_to_sina(wc)
-        print(f"   {code} → {wc} → sina:{sc}")
+        print(f"   {code} → {wc}")
 
     # 2. Period conversion
     print("\n2. Period conversion:")
     for p in ["2025年报", "2025三季报", "2025中报", "2025一季报", "2024年报", "最新一期"]:
         print(f"   {p} → {_period_to_date(p)}")
 
-    # 3. Financials fetch (Wind first, AKShare fallback)
+    # 3. Financials fetch (Wind first, MX Data fallback)
     print("\n3. Financials fetch (300750.SZ, 2025年报):")
     fin = fetch_financials("300750.SZ", period="2025年报")
     if fin:
@@ -2344,7 +1770,7 @@ if __name__ == "__main__":
                 print(f"   {k}: MISSING")
         print(f"   Total accounts: {len(fin)}")
     else:
-        print("   FAILED — check network / AKShare / Wind API key")
+        print("   FAILED — check network / Wind API key")
 
     # 4. Company info
     print("\n4. Company info (300750.SZ):")
