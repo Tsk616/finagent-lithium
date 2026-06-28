@@ -21,7 +21,7 @@
       <div class="ratio-range">正常: {{ r.normal_range }}</div>
       {% endif %}
       {% if r.sparkline %}
-      <div class="ratio-sparkline" data-labels='{{ r.sparkline.labels | tojson }}' data-values='{{ r.sparkline.values | tojson }}'></div>
+      <div class="ratio-sparkline" data-labels='{{ r.sparkline["labels"] | tojson }}' data-values='{{ r.sparkline["values"] | tojson }}'></div>
       {% endif %}
     </div>
     {% endfor %}
