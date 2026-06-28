@@ -174,7 +174,6 @@ function switchSubSector(idx) {
       });
       Plotly.newPlot('chart-ratios', ratioTraces, ratioLayout, plotConfig);
     }
-  }
 
     // Sparklines in ratio cards
     document.querySelectorAll('.ratio-sparkline').forEach(function(el) {

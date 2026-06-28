@@ -1701,8 +1701,12 @@ input:focus, textarea:focus { outline: none; border-color: var(--blue-link); }
 .adv-block-title {
   font-size: 16px; font-weight: 600; color: var(--text-heading);
   margin: 0 0 16px; padding-left: 10px; border-left: 4px solid var(--accent);
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  display: flex; align-items: center; justify-content: flex-start; gap: 8px;
 }
+/* Keep the title text left (the ::before bullet is a flex item; space-between
+   would otherwise push single-text titles to the right). Badges/tags float right. */
+.adv-block-title > .adv-verdict-badge,
+.adv-block-title > .adv-source-tag { margin-left: auto; }
 .adv-business .adv-block-title { border-left-color: #1d6fd6; }
 .adv-risk .adv-block-title { border-left-color: #d84c5f; }
 .adv-valuation .adv-block-title { border-left-color: #7c5cff; }
