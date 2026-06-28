@@ -94,14 +94,24 @@ function validateAndLoad() {
     showError('请上传财报文件，或填写公司名称后手动录入数据，再提交分析。');
     return false;
   }
-  startLoading();
-  return true;
+  startAsyncAnalyze();
+  return false;  // never do the full-page POST; analysis runs async
 }
 
-// ── Loading overlay ──
+// ── Async analysis: start job, poll status, redirect on done ──
 var stepNames = ['step1', 'step2', 'step3', 'step4', 'step5'];
-var stepInterval = null;
-var loadingTimeout = null;
+var POLL_INTERVAL_MS = 2000;
+var POLL_TIMEOUT_MS = 300000;  // 5 minutes
+
+function setStepProgress(step) {
+  for (var i = 0; i < stepNames.length; i++) {
+    var el = document.getElementById(stepNames[i]);
+    if (!el) continue;
+    el.classList.remove('active', 'done');
+    if (i < step - 1) el.classList.add('done');
+    else if (i === step - 1) el.classList.add('active');
+  }
+}
 
 function startLoading() {
   var overlay = document.getElementById('loadingOverlay');
@@ -109,30 +119,80 @@ function startLoading() {
   var btn = document.getElementById('submitBtn');
   btn.disabled = true;
   btn.textContent = '分析中';
-  if (loadingTimeout) clearTimeout(loadingTimeout);
-  loadingTimeout = setTimeout(function() {
-    var sub = document.getElementById('loadingSub');
-    if (sub) {
-      sub.textContent = 'Wind 数据请求耗时较长；若数据不可用，系统会生成含缺数据说明的报告，不会静默消耗额度。';
-    }
-  }, 45000);
+  setStepProgress(1);
+  document.getElementById('loadingSub').textContent = '正在启动分析…';
+}
 
-  var current = 0;
-  stepInterval = setInterval(function() {
-    if (current > 0) {
-      var prev = document.getElementById(stepNames[current - 1]);
-      prev.classList.remove('active');
-      prev.classList.add('done');
+function finishWithError(msg) {
+  var overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.classList.remove('active');
+  var btn = document.getElementById('submitBtn');
+  if (btn) { btn.disabled = false; btn.textContent = '开始分析'; }
+  showError(msg);
+}
+
+function startAsyncAnalyze() {
+  var form = document.getElementById('analysisForm');
+  var formData = new FormData(form);
+  startLoading();
+  fetch('/api/analyze/start', { method: 'POST', body: formData })
+    .then(function(resp) {
+      if (resp.status === 429) throw new Error('BUSY');
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.json();
+    })
+    .then(function(data) {
+      if (!data.job_id) throw new Error('NO_JOB');
+      pollStatus(data.job_id);
+    })
+    .catch(function(err) {
+      if (err.message === 'BUSY') {
+        finishWithError('服务繁忙（已有分析在进行中），请稍候再试。');
+      } else {
+        finishWithError('启动分析失败，请重试。');
+      }
+    });
+}
+
+function pollStatus(jobId) {
+  var started = Date.now();
+  var timer = setInterval(function() {
+    if (Date.now() - started > POLL_TIMEOUT_MS) {
+      clearInterval(timer);
+      finishWithError('分析超时，请重试。');
+      return;
     }
-    if (current < stepNames.length) {
-      document.getElementById(stepNames[current]).classList.add('active');
-    }
-    current++;
-    if (current > stepNames.length) {
-      clearInterval(stepInterval);
-      document.getElementById('loadingSub').textContent = '报告即将生成，请稍候。';
-    }
-  }, 2500);
+    fetch('/api/analyze/status/' + jobId)
+      .then(function(resp) {
+        if (resp.status === 404) throw new Error('LOST');
+        return resp.json();
+      })
+      .then(function(data) {
+        if (data.status === 'running') {
+          if (data.step > 0) setStepProgress(data.step);
+          if (data.label) {
+            var sub = document.getElementById('loadingSub');
+            if (sub) sub.textContent = '正在' + data.label + '…';
+          }
+        } else if (data.status === 'done') {
+          clearInterval(timer);
+          setStepProgress(5);
+          document.getElementById('loadingSub').textContent = '报告已生成，正在跳转…';
+          window.location.href = '/report/' + data.report_id;
+        } else if (data.status === 'error') {
+          clearInterval(timer);
+          finishWithError('分析失败：' + (data.error || '未知错误'));
+        }
+      })
+      .catch(function(err) {
+        clearInterval(timer);
+        if (err.message === 'LOST') {
+          finishWithError('任务已丢失（服务可能重启），请重新提交分析。');
+        } else {
+          finishWithError('网络中断，请重试。');
+        }
+      });
+  }, POLL_INTERVAL_MS);
 }
 
 // ── Workbench ask (follow-up) ──

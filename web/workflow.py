@@ -86,6 +86,7 @@ def run_pipeline(
     financial_data: Optional[Dict[str, Optional[float]]] = None,
     notes_data: Optional[Dict[str, Optional[float]]] = None,
     llm_config: Optional[Dict[str, Any]] = None,
+    progress_cb: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Run the complete 8-node FinAgent-Lithium analysis pipeline.
 
@@ -105,6 +106,14 @@ def run_pipeline(
     financial_data = financial_data or {}
     notes_data = notes_data or {}
     primary_business = primary_business or []
+
+    def _emit(step: int, label: str) -> None:
+        """Report pipeline stage to an optional progress callback (async UI)."""
+        if progress_cb:
+            try:
+                progress_cb(step, label)
+            except Exception:
+                pass
 
     # ── Wind-enhanced sector classification ──
     # If stock_code is provided but no primary_business, try Wind for keywords.
@@ -143,6 +152,7 @@ def run_pipeline(
     }
 
     # Node 1: classify_sector
+    _emit(1, "识别公司与行业赛道")
     sector = classify_sector(
         company_name=company_name, stock_code=stock_code,
         primary_business=primary_business, manual_sector=manual_sector, kb=KB)
@@ -219,6 +229,7 @@ def run_pipeline(
     state["financial_data"] = financial_data
 
     # Node 2: validate_data
+    _emit(2, "校验财务数据")
     validation = validate_data(
         financial_data=financial_data, notes_data=notes_data,
         sector_level1=state.get("sector_level1"),
@@ -231,6 +242,7 @@ def run_pipeline(
         effective_llm_config = {**(llm_config or {}), "api_key": ""}
 
     # Node 3: calculate_general
+    _emit(3, "计算指标与评分")
     general = calculate_general(financial_data=financial_data, notes_data=notes_data)
     general_inds = annotate_formulas(general["general_indicators"])
     state["general_indicators"] = enrich_metric_results(
@@ -382,6 +394,7 @@ def run_pipeline(
     state["key_indicators_for_linkage"] = key_inds["key_indicators_for_linkage"]
 
     # Node 6: linkage_analysis
+    _emit(4, "异常扫描与行业对标")
     linkage = linkage_analysis(
         sector_level2=state.get("sector_level2"),
         sub_sectors=state.get("sub_sectors"),
@@ -416,6 +429,7 @@ def run_pipeline(
     state.update(interpretations)
 
     # Node 8: generate_report
+    _emit(5, "生成评分与报告")
     report = generate_report(
         company_name=company_name, stock_code=stock_code,
         current_period=current_period,
