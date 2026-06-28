@@ -205,3 +205,156 @@ function switchSubSector(idx) {
     renderWhenReady();
   }
 })();
+
+// ── Advanced analysis charts (杜邦/CVP/现金流/Z-score/DCF/相对估值/EVA) ──
+(function() {
+  var el = document.getElementById('advanced-data-json');
+  if (!el) return;
+  var adv;
+  try { adv = JSON.parse(el.textContent); } catch(e) { return; }
+
+  var C = { blue: '#1d6fd6', orange: '#f5a623', green: '#67c23a', red: '#f56c6c', yellow: '#e6a23c',
+            violet: '#6f4bd8', gold: '#b8842a' };
+  var base = {
+    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+    font: { color: '#8a93a5', family: 'system-ui, sans-serif', size: 12 },
+    margin: { t: 24, r: 20, b: 40, l: 50 },
+    xaxis: { gridcolor: 'rgba(125,140,170,0.12)' },
+    yaxis: { gridcolor: 'rgba(125,140,170,0.12)' },
+  };
+  var cfg = { responsive: true, displayModeBar: false };
+  function num(v) { return (typeof v === 'number' && isFinite(v)) ? v : null; }
+  function has(id) { return document.getElementById(id); }
+
+  function draw() {
+    if (typeof Plotly === 'undefined') { setTimeout(draw, 200); return; }
+
+    // CVP break-even line chart
+    try {
+      var cvp = adv.business && adv.business.cvp && adv.business.cvp.chart;
+      if (cvp && has('chart-cvp') && num(cvp.sales) != null) {
+        var s = cvp.sales, fc = num(cvp.fixed_cost) || 0, vr = num(cvp.vc_ratio) || 0;
+        var xmax = Math.max(s * 1.4, (num(cvp.bep) || 0) * 1.2, 0.1);
+        var xs = [0, xmax];
+        var traces = [
+          { x: xs, y: xs, type: 'scatter', mode: 'lines', name: '营业收入', line: { color: C.blue, width: 2 } },
+          { x: xs, y: [fc, fc + vr * xmax], type: 'scatter', mode: 'lines', name: '总成本', line: { color: C.orange, width: 2 } },
+        ];
+        if (num(cvp.bep) != null) {
+          traces.push({ x: [cvp.bep], y: [cvp.bep], type: 'scatter', mode: 'markers+text', name: '盈亏平衡点',
+            marker: { color: C.red, size: 10 }, text: ['盈亏平衡'], textposition: 'top center', textfont: { color: C.red } });
+        }
+        Plotly.newPlot('chart-cvp', traces, Object.assign({}, base, {
+          xaxis: Object.assign({}, base.xaxis, { title: '营业收入(亿元)' }),
+          yaxis: Object.assign({}, base.yaxis, { title: '金额(亿元)' }),
+          legend: { orientation: 'h', y: -0.2, x: 0.5, xanchor: 'center' },
+        }), cfg);
+      }
+    } catch (e) {}
+
+    // Cash-flow waterfall
+    try {
+      var cf = adv.risk && adv.risk.cashflow && adv.risk.cashflow.chart;
+      if (cf && has('chart-cashflow')) {
+        Plotly.newPlot('chart-cashflow', [{
+          type: 'waterfall', orientation: 'v',
+          x: ['经营活动', '投资活动', '筹资活动', '现金净增加'],
+          measure: ['relative', 'relative', 'relative', 'total'],
+          y: [num(cf.operating) || 0, num(cf.investing) || 0, num(cf.financing) || 0, num(cf.net) || 0],
+          connector: { line: { color: 'rgba(125,140,170,0.3)' } },
+          increasing: { marker: { color: C.green } },
+          decreasing: { marker: { color: C.red } },
+          totals: { marker: { color: C.blue } },
+        }], Object.assign({}, base, { yaxis: Object.assign({}, base.yaxis, { title: '亿元' }) }), cfg);
+      }
+    } catch (e) {}
+
+    // Z-score gauge
+    try {
+      var zs = adv.risk && adv.risk.zscore && adv.risk.zscore.chart;
+      if (zs && has('chart-zscore') && num(zs.value) != null) {
+        var cmap = { normal: C.green, warning: C.yellow, danger: C.red };
+        var zones = zs.zones || [];
+        var axmax = zones.length ? zones[zones.length - 1].max : zs.safe * 1.7;
+        var fillMap = { danger: 'rgba(245,108,108,0.25)', warning: 'rgba(230,162,60,0.25)', normal: 'rgba(103,194,58,0.25)' };
+        var steps = zones.map(function (z) { return { range: [z.min, z.max], color: fillMap[z.color] || 'rgba(125,140,170,0.1)' }; });
+        Plotly.newPlot('chart-zscore', [{
+          type: 'indicator', mode: 'gauge+number', value: zs.value,
+          number: { font: { size: 30, color: cmap[zs.color] || C.blue } },
+          gauge: {
+            axis: { range: [0, axmax], tickcolor: '#8a93a5' },
+            bar: { color: cmap[zs.color] || C.blue, thickness: 0.25 },
+            steps: steps,
+            threshold: { line: { color: '#fff', width: 3 }, thickness: 0.8, value: zs.value },
+          },
+        }], Object.assign({}, base, { margin: { t: 20, r: 24, b: 10, l: 24 } }), cfg);
+      }
+    } catch (e) {}
+
+    // DCF intrinsic vs price
+    try {
+      var dcf = adv.valuation && adv.valuation.dcf && adv.valuation.dcf.chart;
+      if (dcf && has('chart-dcf') && (num(dcf.intrinsic) != null || num(dcf.price) != null)) {
+        Plotly.newPlot('chart-dcf', [{
+          type: 'bar', orientation: 'h',
+          y: ['当前股价', '每股内在价值'], x: [num(dcf.price) || 0, num(dcf.intrinsic) || 0],
+          marker: { color: [C.gold, C.violet] },
+          text: [num(dcf.price) != null ? dcf.price.toFixed(2) + '元' : '—',
+                 num(dcf.intrinsic) != null ? dcf.intrinsic.toFixed(2) + '元' : '—'],
+          textposition: 'auto',
+        }], Object.assign({}, base, {
+          xaxis: Object.assign({}, base.xaxis, { title: '元/股' }), margin: { t: 20, r: 20, b: 40, l: 90 },
+        }), cfg);
+      }
+    } catch (e) {}
+
+    // Relative valuation radar (normalized to comparable scale)
+    try {
+      var rel = adv.valuation && adv.valuation.relative && adv.valuation.relative.chart;
+      if (rel && has('chart-relative') && rel.company) {
+        var caps = { PE: 50, PB: 8, PS: 12, PEG: 3 };
+        var labels = rel.labels || [];
+        var norm = rel.company.map(function (v, i) {
+          var cap = caps[labels[i]] || 1;
+          if (typeof v !== 'number' || !isFinite(v) || v < 0) return 0;
+          return Math.min(v / cap * 100, 100);
+        });
+        var raw = rel.company.map(function (v) { return (typeof v === 'number' && isFinite(v)) ? v.toFixed(2) : '—'; });
+        Plotly.newPlot('chart-relative', [{
+          type: 'scatterpolar', r: norm.concat([norm[0]]), theta: labels.concat([labels[0]]),
+          fill: 'toself', name: '估值水平', fillcolor: 'rgba(111,75,216,0.18)', line: { color: C.violet },
+          text: raw.concat([raw[0]]), hovertemplate: '%{theta}: %{text}<extra></extra>',
+        }], Object.assign({}, base, {
+          polar: {
+            radialaxis: { visible: true, range: [0, 100], showticklabels: false, gridcolor: 'rgba(125,140,170,0.2)' },
+            angularaxis: { gridcolor: 'rgba(125,140,170,0.2)' }, bgcolor: 'transparent',
+          },
+          margin: { t: 30, r: 40, b: 30, l: 40 },
+        }), cfg);
+      }
+    } catch (e) {}
+
+    // EVA waterfall
+    try {
+      var eva = adv.strategy && adv.strategy.eva && adv.strategy.eva.chart;
+      if (eva && has('chart-eva')) {
+        Plotly.newPlot('chart-eva', [{
+          type: 'waterfall', orientation: 'v',
+          x: ['NOPAT', '资本成本', 'EVA'],
+          measure: ['relative', 'relative', 'total'],
+          y: [num(eva.nopat) || 0, -(num(eva.capital_charge) || 0), num(eva.eva) || 0],
+          connector: { line: { color: 'rgba(125,140,170,0.3)' } },
+          increasing: { marker: { color: C.green } },
+          decreasing: { marker: { color: C.orange } },
+          totals: { marker: { color: (num(eva.eva) || 0) >= 0 ? C.green : C.red } },
+        }], Object.assign({}, base, { yaxis: Object.assign({}, base.yaxis, { title: '亿元' }) }), cfg);
+      }
+    } catch (e) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', draw);
+  } else {
+    draw();
+  }
+})();

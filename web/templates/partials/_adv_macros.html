@@ -1,0 +1,20 @@
+{# Shared rendering macros for advanced analysis sections #}
+{% macro adv_ind(ind) %}
+<div class="adv-ind risk-{{ ind.risk_color }}">
+  <div class="adv-ind-head">
+    <span class="adv-ind-name">{{ ind.name }}</span>
+    <span class="adv-ind-val">{{ ind.display }}</span>
+  </div>
+  {% if ind.range %}<div class="adv-ind-range">{{ ind.range }}</div>{% endif %}
+  {% if ind.formula %}<div class="adv-ind-formula">{{ ind.formula }}</div>{% endif %}
+  {% if ind.explanation %}<div class="adv-ind-exp">{{ ind.explanation }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{% macro adv_grid(indicators) %}
+<div class="adv-ind-grid">
+  {% for ind in indicators %}{{ adv_ind(ind) }}{% endfor %}
+</div>
+{% endmacro %}
+
+{% macro fmt(val, suffix='') %}{% if val is not none %}{{ '%.2f'|format(val) }}{{ suffix }}{% else %}—{% endif %}{% endmacro %}

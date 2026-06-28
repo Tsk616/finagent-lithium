@@ -1,0 +1,76 @@
+{% from 'partials/_adv_macros.html' import adv_grid %}
+{% set dcf = advanced.valuation.dcf %}
+{% set rel = advanced.valuation.relative %}
+<section class="chapter adv-section adv-valuation" id="ch-adv-valuation">
+  <div class="adv-eyebrow">估值 · INTRINSIC vs MARKET</div>
+  <h2 class="chapter-title">💎 投资估值型财务分析</h2>
+  <p class="adv-section-intro">绝对估值（DCF）与相对估值（PE/PB/PS/PEG）双视角衡量内在价值。</p>
+
+  {% if dcf %}
+  <div class="adv-block">
+    <h3 class="adv-block-title">DCF 折现现金流估值</h3>
+    {% if dcf.assumptions %}
+    <div class="adv-assumptions">
+      {% for k, v in dcf.assumptions.items() %}
+      <span class="adv-assump"><b>{{ k }}</b>{{ v }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if dcf.available %}
+      {% if dcf.verdict %}<div class="dcf-verdict dcf-{{ dcf.verdict_color or 'info' }}">{{ dcf.verdict }}</div>{% endif %}
+      <div class="adv-chart" id="chart-dcf"></div>
+      {% if dcf.diagnosis %}<div class="adv-diagnosis">📌 {{ dcf.diagnosis }}</div>{% endif %}
+      {{ adv_grid(dcf.indicators) }}
+
+      {% if dcf.projection %}
+      <h4 class="adv-subtitle">五年自由现金流预测（亿元）</h4>
+      <div class="dcf-proj">
+        <table>
+          <thead><tr><th>年度</th>{% for p in dcf.projection %}<th>{{ p.year }}</th>{% endfor %}</tr></thead>
+          <tbody>
+            <tr><td>预测 FCF</td>{% for p in dcf.projection %}<td>{{ '%.1f'|format(p.fcf) }}</td>{% endfor %}</tr>
+            <tr><td>折现因子</td>{% for p in dcf.projection %}<td>{{ '%.3f'|format(p.discount) }}</td>{% endfor %}</tr>
+            <tr><td>现值</td>{% for p in dcf.projection %}<td>{{ '%.1f'|format(p.pv) }}</td>{% endfor %}</tr>
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if dcf.sensitivity and dcf.sensitivity.available %}
+      <h4 class="adv-subtitle">每股内在价值敏感性（WACC × 永续增长，元/股）</h4>
+      <div class="dcf-sens">
+        <table>
+          <thead><tr><th>WACC ＼ g</th>{% for g in dcf.sensitivity.gp_labels %}<th>{{ g }}</th>{% endfor %}</tr></thead>
+          <tbody>
+            {% for row in dcf.sensitivity.grid %}
+            {% set ri = loop.index0 %}
+            <tr>
+              <th>{{ dcf.sensitivity.wacc_labels[ri] }}</th>
+              {% for cell in row %}
+              <td class="{{ 'sens-base' if (ri == dcf.sensitivity.base_row and loop.index0 == dcf.sensitivity.base_col) else '' }}">{{ '%.1f'|format(cell) if cell is not none else '—' }}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    {% else %}
+      <p class="adv-note">⚠️ {{ dcf.note }}</p>
+      {{ adv_grid(dcf.indicators) }}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if rel and rel.available %}
+  <div class="adv-block">
+    <h3 class="adv-block-title">相对估值 · 倍数体检</h3>
+    <div class="relative-layout">
+      <div class="adv-chart relative-radar" id="chart-relative"></div>
+      <div class="relative-inds">{{ adv_grid(rel.indicators) }}</div>
+    </div>
+    {% if rel.diagnosis %}<div class="adv-diagnosis">📌 {{ rel.diagnosis }}</div>{% endif %}
+    {% if rel.note %}<p class="adv-note">ℹ️ {{ rel.note }} 同行横向对比详见「行业对标」章节。</p>{% endif %}
+  </div>
+  {% endif %}
+</section>

@@ -268,6 +268,19 @@ def run_pipeline(
         except Exception as exc:
             state["_historical_error"] = str(exc)
 
+    # ── Market data fetch (price / market cap / shares, for valuation models) ──
+    state["market_data"] = {}
+    if stock_code:
+        try:
+            from nodes.wind_adapter import fetch_market_data, stock_code_to_windcode
+            windcode = stock_code_to_windcode(stock_code)
+            mkt_timeout = int(os.environ.get("WIND_CONTEXT_TIMEOUT_SECONDS", "6"))
+            market = fetch_market_data(windcode, timeout=mkt_timeout)
+            if market:
+                state["market_data"] = market
+        except Exception as exc:
+            state["_market_data_error"] = str(exc)
+
     # ── Wind: Macro + Peer context (optional) ──
     try:
         from nodes.wind_adapter import (
@@ -456,6 +469,14 @@ def run_pipeline(
                 state["strategy_insights"] = json.loads(cleaned)
         except Exception:
             pass
+
+    # ── Advanced analysis models (杜邦/CVP/现金流/Z-score/DCF/相对估值/哈佛/EVA) ──
+    try:
+        from nodes.advanced_models import run_advanced_analysis
+        state["advanced_analysis"] = run_advanced_analysis(state, effective_llm_config)
+    except Exception as exc:
+        state["advanced_analysis"] = {}
+        state["_advanced_error"] = str(exc)
 
     state["status"] = "completed"
     return state

@@ -1,0 +1,99 @@
+{% from 'partials/_adv_macros.html' import adv_grid, fmt %}
+{% set dp = advanced.business.dupont %}
+{% set cvp = advanced.business.cvp %}
+<section class="chapter adv-section adv-business" id="ch-adv-business">
+  <div class="adv-eyebrow">拆解 · DECOMPOSITION</div>
+  <h2 class="chapter-title">🧭 业务决策型财务分析</h2>
+  <p class="adv-section-intro">拆解盈利驱动与成本结构，支撑经营层面的决策判断。</p>
+
+  {% if dp and dp.available %}
+  <div class="adv-block">
+    <h3 class="adv-block-title">
+      杜邦分析 · ROE 多层分解
+      {% if dp.driver_type %}<span class="adv-verdict-badge vb-sec">{{ dp.driver_type[0] }}</span>{% endif %}
+    </h3>
+    <div class="dupont-tree">
+      <div class="dupont-root">
+        <span class="dupont-label">净资产收益率 ROE</span>
+        <span class="dupont-value">{{ fmt(dp.chart.roe, '%') }}</span>
+      </div>
+      <div class="dupont-eq">=</div>
+      <div class="dupont-children">
+        <div class="dupont-node">
+          <span class="dupont-label">净利率</span>
+          <span class="dupont-value">{{ fmt(dp.chart.net_margin, '%') }}</span>
+          <span class="dupont-tag">盈利能力</span>
+        </div>
+        <span class="dupont-op">×</span>
+        <div class="dupont-node">
+          <span class="dupont-label">总资产周转率</span>
+          <span class="dupont-value">{{ fmt(dp.chart.asset_turnover, '次') }}</span>
+          <span class="dupont-tag">营运效率</span>
+        </div>
+        <span class="dupont-op">×</span>
+        <div class="dupont-node">
+          <span class="dupont-label">权益乘数</span>
+          <span class="dupont-value">{{ fmt(dp.chart.equity_multiplier, '倍') }}</span>
+          <span class="dupont-tag">财务杠杆</span>
+        </div>
+      </div>
+    </div>
+
+    {% if dp.diagnosis %}<div class="adv-diagnosis">📌 {{ dp.diagnosis }}</div>{% endif %}
+
+    <h4 class="adv-subtitle">核心指标体检</h4>
+    {{ adv_grid(dp.indicators) }}
+
+    {% if dp.five_factor and dp.five_factor.available %}
+    <h4 class="adv-subtitle">五因子分解（ROE = 税收负担 × 利息负担 × EBIT利润率 × 周转率 × 权益乘数）</h4>
+    <div class="adv-factor-row">
+      {% for f in dp.five_factor.factors %}
+      <div class="adv-factor">
+        <div class="adv-factor-val">{{ fmt(f.value, f.unit) }}</div>
+        <div class="adv-factor-name">{{ f.name }}</div>
+        <div class="adv-factor-hint">{{ f.hint }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if dp.trend and dp.trend.available %}
+    <p class="adv-trend">📈 {{ dp.trend.text }}</p>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if cvp and cvp.available %}
+  <div class="adv-block">
+    <h3 class="adv-block-title">本量利分析 · 盈亏平衡</h3>
+    <div class="adv-chart" id="chart-cvp"></div>
+    {% if cvp.diagnosis %}<div class="adv-diagnosis">📌 {{ cvp.diagnosis }}</div>{% endif %}
+
+    {% if cvp.cost_structure and cvp.cost_structure.available %}
+    <h4 class="adv-subtitle">成本结构拆解（近似）</h4>
+    <div class="cost-struct">
+      {% for c in cvp.cost_structure.rows %}
+      <div class="cost-row">
+        <span class="cost-name">{{ c.name }}</span>
+        <div class="cost-track"><i style="width: {{ c.ratio if c.ratio and c.ratio <= 100 else 0 }}%;"></i></div>
+        <span class="cost-pct">{{ '%.1f'|format(c.ratio) }}%</span>
+        <span class="cost-amt">{{ '%.1f'|format(c.amount) }}亿</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <h4 class="adv-subtitle">核心指标体检</h4>
+    {{ adv_grid(cvp.indicators) }}
+
+    {% if cvp.sensitivity and cvp.sensitivity.available %}
+    <div class="cvp-sens">
+      <span class="cvp-sens-label">经营杠杆敏感性</span>
+      <span class="cvp-sens-item up">营收 +10% → 营业利润 {{ '%+.0f'|format(cvp.sensitivity.up) }}%</span>
+      <span class="cvp-sens-item down">营收 −10% → 营业利润 {{ '%+.0f'|format(cvp.sensitivity.down) }}%</span>
+    </div>
+    {% endif %}
+    {% if cvp.note %}<p class="adv-note">⚠️ {{ cvp.note }}</p>{% endif %}
+  </div>
+  {% endif %}
+</section>

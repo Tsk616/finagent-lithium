@@ -11,7 +11,7 @@
       </div>
       <div class="ratio-value">
         {% if r.value is not none %}
-          {{ "%.2f"|format(r.value) }}{% if '率' in r.name or 'ROE' in r.name %}%{% elif r.name == '流动比率' %}倍{% elif r.name == '净利润现金含量' %}倍{% endif %}
+          {{ r.value }}
         {% else %}
           <span class="muted">—</span>
         {% endif %}

@@ -1,0 +1,77 @@
+{% from 'partials/_adv_macros.html' import adv_grid %}
+{% set hv = advanced.strategy.harvard %}
+{% set eva = advanced.strategy.eva %}
+<section class="chapter adv-section adv-strategy" id="ch-adv-strategy">
+  <div class="adv-eyebrow">研判 · SYNTHESIS</div>
+  <h2 class="chapter-title">🏛️ 战略综合型财务分析</h2>
+  <p class="adv-section-intro">哈佛分析框架做定性综合诊断，EVA 衡量真实价值创造。</p>
+
+  {% if hv and hv.available %}
+  <div class="adv-block">
+    <h3 class="adv-block-title">
+      哈佛分析框架 · 四维诊断
+      <span class="adv-source-tag">{{ '🤖 AI 定性' if hv.source == 'llm' else '📐 规则兜底' }}</span>
+    </h3>
+    <div class="harvard-matrix">
+      {% for d in hv.dimensions %}
+      <div class="harvard-quad">
+        <div class="harvard-quad-head">
+          <span class="harvard-quad-name">{{ d.name }}</span>
+          {% if d.score is not none %}<span class="harvard-quad-score">{{ d.score }}</span>{% endif %}
+        </div>
+        {% if d.score is not none %}
+        <div class="harvard-bar"><i style="width: {{ d.score if d.score <= 100 else 100 }}%;"></i></div>
+        {% endif %}
+        <p class="harvard-quad-text">{{ d.text }}</p>
+        {% if d.points %}
+        <ul class="harvard-points">
+          {% for p in d.points %}<li>{{ p }}</li>{% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% if hv.conclusion %}<p class="adv-summary harvard-conclusion">🧠 {{ hv.conclusion }}</p>{% endif %}
+  </div>
+  {% endif %}
+
+  {% if eva and eva.available %}
+  <div class="adv-block">
+    <h3 class="adv-block-title">
+      EVA 经济增加值
+      {% if eva.roic_wacc %}<span class="adv-verdict-badge vb-{{ eva.roic_wacc.color }}">{{ eva.roic_wacc.verdict }}</span>{% endif %}
+    </h3>
+    {% if eva.assumptions %}
+    <div class="adv-assumptions">
+      {% for k, v in eva.assumptions.items() %}
+      <span class="adv-assump"><b>{{ k }}</b>{{ v }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if eva.roic_wacc and eva.roic_wacc.spread is not none %}
+    <div class="roic-wacc-bar">
+      <div class="rw-cell rw-roic">
+        <span class="rw-label">ROIC 资本回报</span>
+        <span class="rw-value">{{ "%.1f"|format(eva.roic_wacc.roic) }}%</span>
+      </div>
+      <div class="rw-op rw-{{ eva.roic_wacc.color }}">
+        {{ '＞' if eva.roic_wacc.spread > 0 else '＜' if eva.roic_wacc.spread < 0 else '＝' }}
+      </div>
+      <div class="rw-cell rw-wacc">
+        <span class="rw-label">WACC 资本成本</span>
+        <span class="rw-value">{{ "%.1f"|format(eva.roic_wacc.wacc) }}%</span>
+      </div>
+      <div class="rw-spread rw-{{ eva.roic_wacc.color }}">
+        利差 {{ "%+.1f"|format(eva.roic_wacc.spread) }}pp
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="adv-chart" id="chart-eva"></div>
+    {% if eva.diagnosis %}<div class="adv-diagnosis">📌 {{ eva.diagnosis }}</div>{% endif %}
+    <h4 class="adv-subtitle">核心指标体检</h4>
+    {{ adv_grid(eva.indicators) }}
+  </div>
+  {% endif %}
+</section>

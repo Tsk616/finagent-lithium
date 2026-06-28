@@ -115,7 +115,10 @@ def build_template_data(state: dict) -> dict:
         result = []
         for name, ind in indicators.items():
             val = ind.get("value")
-            risk = str(ind.get("risk_level", ""))
+            # RiskLevel is a (str, Enum); on Python 3.12 str(member) yields
+            # 'RiskLevel.NORMAL', so prefer .value to get the '🟢正常' label.
+            _rl = ind.get("risk_level", "")
+            risk = _rl.value if hasattr(_rl, "value") else str(_rl)
             result.append({
                 "name": name,
                 "value": format_ind_value(val, ind.get('unit', '')),
@@ -286,7 +289,21 @@ def build_template_data(state: dict) -> dict:
         # AI strategy insights
         "strategy_insights": state.get("strategy_insights", {}),
         "has_strategy": bool(state.get("strategy_insights", {}).get("strategy_summary")),
+        # Advanced analysis models (杜邦/CVP/现金流/Z-score/DCF/相对估值/哈佛/EVA)
+        "advanced": state.get("advanced_analysis", {}),
+        "has_advanced": _advanced_has_content(state.get("advanced_analysis", {})),
     }
+
+
+def _advanced_has_content(advanced: dict) -> bool:
+    """True if any advanced model produced usable output."""
+    if not advanced:
+        return False
+    for section in ("business", "risk", "valuation", "strategy"):
+        for model in (advanced.get(section) or {}).values():
+            if isinstance(model, dict) and model.get("available"):
+                return True
+    return False
 
 
 def _build_chart_data(historical: dict) -> dict:

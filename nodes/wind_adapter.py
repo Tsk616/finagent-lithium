@@ -1563,6 +1563,162 @@ def fetch_market_valuation(windcode: str, timeout: int = 10) -> Dict[str, Option
     return result
 
 
+# ── Market data (price / market cap / shares) for valuation models ──────────
+
+_MARKET_FIELD_ALIASES = {
+    "股价": ["最新成交价", "最新价", "收盘价", "前收盘价"],
+    "总市值": ["总市值1", "总市值", "总市值2", "A股总市值"],
+    "流通市值": ["流通市值"],
+    "总股本": ["总股本", "股本"],
+    "市盈率": ["市盈率(TTM)", "市盈率TTM", "市盈率(LYR)", "市盈率"],
+    "市净率": ["市净率(LF)", "市净率", "市净率PB"],
+    "股息率": ["股息率"],
+    "近1年涨跌幅": ["近1年涨跌幅", "250日涨跌幅"],
+}
+
+
+def _coerce_market_number(num_str: str, unit: str) -> Optional[float]:
+    """Parse a number string + Chinese unit suffix into a base-unit float."""
+    try:
+        num = float(num_str.replace(",", ""))
+    except (ValueError, TypeError):
+        return None
+    unit = (unit or "").strip()
+    for u in ("万亿", "亿", "千万", "百万", "万", "千", "百"):
+        if u in unit:
+            return num * _UNIT_MULTIPLIER[u]
+    return num
+
+
+def _parse_market_indicators_text(text: str) -> Dict[str, Optional[float]]:
+    """Best-effort parse of Wind price-indicator output (JSON or NL text).
+
+    Returns standardized keys from _MARKET_FIELD_ALIASES. Values left in their
+    raw scale here; unit normalization is applied later by the caller.
+    """
+    # Collect any {field: value} pairs from a JSON envelope first.
+    json_pairs: Dict[str, Any] = {}
+    try:
+        obj = json.loads(text)
+
+        def _walk(o: Any) -> None:
+            if isinstance(o, dict):
+                for k, v in o.items():
+                    if isinstance(v, (int, float, str)):
+                        json_pairs.setdefault(str(k), v)
+                    else:
+                        _walk(v)
+            elif isinstance(o, list):
+                for item in o:
+                    _walk(item)
+
+        _walk(obj)
+    except (ValueError, TypeError):
+        pass
+
+    result: Dict[str, Optional[float]] = {}
+    for std_key, aliases in _MARKET_FIELD_ALIASES.items():
+        val: Optional[float] = None
+        for alias in aliases:
+            # 1) exact JSON field
+            if alias in json_pairs:
+                try:
+                    val = float(str(json_pairs[alias]).replace(",", ""))
+                    break
+                except (ValueError, TypeError):
+                    pass
+            # 2) regex in free text: "字段名 ... 数字 单位"
+            m = re.search(
+                re.escape(alias) + r"[^0-9+\-]{0,8}([+-]?\d[\d,]*\.?\d*)\s*([万亿千百]?元?|%)?",
+                text,
+            )
+            if m:
+                val = _coerce_market_number(m.group(1), m.group(2) or "")
+                break
+        if val is not None:
+            result[std_key] = val
+    return result
+
+
+def _normalize_market_units(d: Dict[str, Optional[float]]) -> Dict[str, Optional[float]]:
+    """Heuristic unit normalization → 总市值 in 元, 总股本 in 股.
+
+    Snapshot APIs often report market cap in 亿元 and shares in 亿股/万股.
+    Listed-company market caps are >= 1e8 元; share counts >= 1e7 股. Values far
+    below those magnitudes are scaled up. If both 总市值 and 股价 exist, derive
+    总股本 from them (most reliable).
+    """
+    mc = d.get("总市值")
+    if mc is not None and 0 < mc < 1e6:
+        d["总市值"] = mc * 1e8  # 亿元 → 元
+    fc = d.get("流通市值")
+    if fc is not None and 0 < fc < 1e6:
+        d["流通市值"] = fc * 1e8
+
+    price = d.get("股价")
+    mc = d.get("总市值")
+    if d.get("总股本") is None and mc and price and price > 0:
+        d["总股本"] = mc / price
+    else:
+        sh = d.get("总股本")
+        if sh is not None and 0 < sh < 1e6:
+            d["总股本"] = sh * (1e8 if sh < 1e4 else 1e4)  # 亿股/万股 → 股
+    return d
+
+
+def fetch_market_data(windcode: str, timeout: int = 10) -> Dict[str, Optional[float]]:
+    """Fetch market data for valuation models (Z-score / DCF / relative valuation).
+
+    Source priority: Wind MCP price indicators → MX Data fallback.
+    Returned values are normalized to base units:
+        股价: 元/股, 总市值/流通市值: 元, 总股本: 股,
+        市盈率/市净率: 倍, 股息率/近1年涨跌幅: %.
+
+    Best-effort: missing fields are simply absent. Returns {} if no source.
+    """
+    result: Dict[str, Optional[float]] = {}
+
+    # ── Phase 1: Wind MCP price indicators ──
+    try:
+        indexes = "最新成交价,总市值1,总股本,流通市值,市盈率(TTM),市净率,市盈率(LYR),股息率,近1年涨跌幅"
+        mcp = _call_wind_cli(
+            "stock_data", "get_stock_price_indicators",
+            {"windcode": windcode, "indexes": indexes},
+            timeout=timeout,
+        )
+        if mcp is not None:
+            text = _extract_text_from_mcp_result(mcp)
+            if text:
+                for k, v in _parse_market_indicators_text(text).items():
+                    if v is not None:
+                        result[k] = v
+    except Exception as e:
+        logger.warning("Wind market data fetch failed: %s", e)
+
+    # ── Phase 2: MX Data fallback for missing fields ──
+    _NEEDED = ("股价", "总市值", "总股本", "市盈率", "市净率", "股息率")
+    if any(result.get(k) is None for k in _NEEDED):
+        try:
+            code = _mx_stock_label(windcode)
+            raw = _mx_query(f"{code} 最新价 总市值 总股本 市盈率TTM 市净率 股息率", timeout=timeout)
+            if raw:
+                rename = {
+                    "最新价": "股价", "收盘价": "股价", "最新成交价": "股价",
+                    "总市值": "总市值", "A股总市值": "总市值", "总市值1": "总市值",
+                    "总股本": "总股本", "股本": "总股本",
+                    "市盈率TTM": "市盈率", "市盈率(TTM)": "市盈率", "市盈率": "市盈率",
+                    "市净率": "市净率", "市净率PB": "市净率",
+                    "股息率": "股息率",
+                }
+                for k, v in _mx_parse_financials(raw, rename_map=rename).items():
+                    if result.get(k) is None and v is not None:
+                        result[k] = v
+        except Exception as e:
+            logger.warning("MX market data fetch failed: %s", e)
+
+    return _normalize_market_units(result)
+
+
 def fetch_company_info(windcode: str, timeout: int = 6) -> Optional[Dict[str, Any]]:
     """Fetch company basic info.
 

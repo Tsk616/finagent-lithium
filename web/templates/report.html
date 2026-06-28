@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{ company_name }} - FinAgent-Lithium 财报分析</title>
 <link rel="stylesheet" href="/static/style.css">
-<script src="https://cdn.plot.ly/plotly-basic-2.35.0.min.js" defer></script>
+<script src="https://cdn.plot.ly/plotly-2.35.0.min.js" defer></script>
 </head>
 <body>
 <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -63,6 +63,12 @@
   <a href="#ch5b-macro">宏观背景</a>
   <a href="#ch5c-peers">行业对标</a>
   {% if has_strategy %}<a href="#ch-strategy">战略洞察</a>{% endif %}
+  {% if has_advanced %}
+  <a href="#ch-adv-business">业务决策</a>
+  <a href="#ch-adv-risk">风险防控</a>
+  <a href="#ch-adv-valuation">投资估值</a>
+  <a href="#ch-adv-strategy">战略综合</a>
+  {% endif %}
   <a href="#ch6-summary">总结</a>
   <a href="#ch7-ask">追问交互</a>
 </nav>
@@ -460,6 +466,14 @@
   <!-- ── AI Strategy Insights (Phase 4) ── -->
   {% include 'partials/_strategy_insights.html' %}
 
+  <!-- ── Advanced analysis models (四大方法论板块) ── -->
+  {% if has_advanced %}
+  {% include 'partials/_adv_business.html' %}
+  {% include 'partials/_adv_risk.html' %}
+  {% include 'partials/_adv_valuation.html' %}
+  {% include 'partials/_adv_strategy.html' %}
+  {% endif %}
+
   <!-- Chapter 6: Summary (investor perspective) -->
   <section class="chapter" id="ch6-summary">
     <h2 class="chapter-title">📝 投资视角总结</h2>
@@ -505,6 +519,7 @@
 <!-- ── Hidden report data for download ── -->
 <script id="report-markdown-data" type="text/markdown">{{ report_markdown | e }}</script>
 <script id="report-id-data" type="application/json">{{ report_id or "" }}</script>
+{% if has_advanced %}<script id="advanced-data-json" type="application/json">{{ advanced | tojson }}</script>{% endif %}
 
 </div>
 {% endif %}

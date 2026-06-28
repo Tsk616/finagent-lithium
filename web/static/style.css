@@ -1686,3 +1686,318 @@ input:focus, textarea:focus { outline: none; border-color: var(--blue-link); }
 
 /* compare page enhancements */
 .compare-unit { font-size: 11px; color: var(--text-muted); margin-left: 4px; }
+
+/* ════ Advanced analysis sections (四大方法论板块) ════ */
+.adv-section { margin-top: 40px; }
+.adv-section-intro { font-size: 13px; color: var(--text-muted); margin: -8px 0 18px; }
+.adv-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow);
+}
+.adv-block-title {
+  font-size: 16px; font-weight: 600; color: var(--text-heading);
+  margin: 0 0 16px; padding-left: 10px; border-left: 4px solid var(--accent);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.adv-business .adv-block-title { border-left-color: #1d6fd6; }
+.adv-risk .adv-block-title { border-left-color: #d84c5f; }
+.adv-valuation .adv-block-title { border-left-color: #7c5cff; }
+.adv-strategy .adv-block-title { border-left-color: #22a06b; }
+.adv-source-tag {
+  font-size: 11px; font-weight: 500; color: var(--text-muted);
+  background: var(--gray-bg); border-radius: 12px; padding: 2px 10px;
+}
+.adv-chart { width: 100%; min-height: 300px; margin: 8px 0 14px; }
+.adv-summary { font-size: 13px; color: var(--text-secondary); margin: 10px 0; line-height: 1.6; }
+.adv-note { font-size: 12px; color: var(--yellow-text); background: var(--yellow-bg);
+  border-radius: 6px; padding: 8px 12px; margin: 10px 0 0; }
+.adv-assumptions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.adv-assump { font-size: 12px; color: var(--text-secondary); background: var(--accent-soft);
+  border-radius: 6px; padding: 4px 10px; }
+.adv-assump b { color: var(--accent-strong); margin-right: 4px; font-weight: 600; }
+
+/* indicator grid (shared) */
+.adv-ind-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px; margin-top: 12px;
+}
+.adv-ind {
+  border: 1px solid var(--border); border-left: 4px solid var(--gray-border);
+  border-radius: 6px; padding: 10px 12px; background: var(--bg-card);
+}
+.adv-ind.risk-normal { border-left-color: var(--green-border); background: var(--green-bg); }
+.adv-ind.risk-warning { border-left-color: var(--yellow-border); background: var(--yellow-bg); }
+.adv-ind.risk-danger { border-left-color: var(--red-border); background: var(--red-bg); }
+.adv-ind.risk-pending { border-left-color: var(--gray-border); opacity: 0.65; }
+.adv-ind.risk-info { border-left-color: var(--accent); }
+.adv-ind-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.adv-ind-name { font-size: 13px; font-weight: 600; color: var(--text-heading); }
+.adv-ind-val { font-size: 16px; font-weight: 700; color: var(--text); }
+.adv-ind-range { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.adv-ind-formula { font-size: 11px; color: var(--text-secondary); margin-top: 4px; font-family: ui-monospace, monospace; }
+.adv-ind-exp { font-size: 11px; color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+
+/* DuPont tree */
+.dupont-tree {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 16px; background: var(--accent-soft); border-radius: 8px;
+}
+.dupont-root {
+  display: flex; flex-direction: column; align-items: center;
+  background: var(--accent); color: #fff; padding: 10px 24px; border-radius: 8px; min-width: 180px;
+}
+.dupont-root .dupont-label { font-size: 13px; opacity: 0.9; }
+.dupont-root .dupont-value { font-size: 24px; font-weight: 700; }
+.dupont-eq { font-size: 18px; color: var(--text-muted); font-weight: 700; }
+.dupont-children { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.dupont-node {
+  display: flex; flex-direction: column; align-items: center;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 18px; min-width: 120px;
+}
+.dupont-node .dupont-label { font-size: 12px; color: var(--text-secondary); }
+.dupont-node .dupont-value { font-size: 20px; font-weight: 700; color: var(--accent-strong); }
+.dupont-tag { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.dupont-op { font-size: 18px; color: var(--accent); font-weight: 700; }
+
+/* Z-score gauge layout */
+.zscore-layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+.zscore-gauge-wrap { display: flex; flex-direction: column; align-items: center; }
+.zscore-gauge { min-height: 220px; width: 100%; }
+.zscore-verdict { font-size: 14px; font-weight: 700; padding: 6px 16px; border-radius: 20px; margin-top: 4px; }
+.zscore-normal { background: var(--green-bg); color: var(--green-text); }
+.zscore-warning { background: var(--yellow-bg); color: var(--yellow-text); }
+.zscore-danger { background: var(--red-bg); color: var(--red-text); }
+.zscore-pending { background: var(--gray-bg); color: var(--gray-text); }
+.zscore-model { font-size: 11px; color: var(--text-muted); margin-top: 6px; text-align: center; }
+.zscore-factors { min-width: 0; }
+
+/* DCF verdict + relative valuation */
+.dcf-verdict { display: inline-block; font-size: 14px; font-weight: 700; padding: 6px 16px;
+  border-radius: 20px; margin-bottom: 12px; }
+.dcf-normal { background: var(--green-bg); color: var(--green-text); }
+.dcf-warning { background: var(--yellow-bg); color: var(--yellow-text); }
+.dcf-danger { background: var(--red-bg); color: var(--red-text); }
+.dcf-info { background: var(--gray-bg); color: var(--gray-text); }
+.relative-layout { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: center; }
+.relative-radar { min-height: 300px; width: 100%; }
+.relative-inds { min-width: 0; }
+
+/* Harvard 2x2 matrix */
+.harvard-matrix { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.harvard-quad {
+  background: var(--gray-bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 16px;
+}
+.harvard-quad-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.harvard-quad-name { font-size: 14px; font-weight: 600; color: var(--text-heading); }
+.harvard-quad-score { font-size: 18px; font-weight: 700; color: #22a06b; }
+.harvard-bar { height: 6px; background: var(--bg-elevated); border-radius: 3px; overflow: hidden; margin-bottom: 10px; }
+.harvard-bar i { display: block; height: 100%; background: linear-gradient(90deg, #22a06b, #67c23a); }
+.harvard-quad-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+.harvard-conclusion {
+  margin-top: 14px; padding: 12px 16px; background: var(--accent-soft);
+  border-radius: 8px; font-weight: 500; color: var(--accent-strong);
+}
+
+/* Deepened models: verdict badge / diagnosis / sub-title / factor row / trend */
+.adv-verdict-badge {
+  font-size: 12px; font-weight: 700; padding: 3px 12px; border-radius: 12px; margin-left: 8px;
+}
+.adv-verdict-badge.vb-normal { background: var(--green-bg); color: var(--green-text); }
+.adv-verdict-badge.vb-warning { background: var(--yellow-bg); color: var(--yellow-text); }
+.adv-verdict-badge.vb-danger { background: var(--red-bg); color: var(--red-text); }
+.adv-verdict-badge.vb-pending { background: var(--gray-bg); color: var(--gray-text); }
+
+.adv-diagnosis {
+  margin: 14px 0; padding: 12px 16px; line-height: 1.7; font-size: 13.5px;
+  color: var(--text); background: var(--bg-elevated);
+  border-left: 4px solid var(--accent); border-radius: 6px;
+}
+.adv-subtitle {
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+  margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px dashed var(--border);
+}
+.adv-trend {
+  margin-top: 12px; font-size: 13px; color: var(--text-secondary);
+  background: var(--accent-soft); border-radius: 6px; padding: 10px 14px;
+}
+
+/* Five-factor decomposition row */
+.adv-factor-row {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+}
+.adv-factor {
+  background: var(--gray-bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 10px 8px; text-align: center;
+}
+.adv-factor-val { font-size: 18px; font-weight: 700; color: var(--accent-strong); }
+.adv-factor-name { font-size: 12px; color: var(--text-heading); margin-top: 4px; font-weight: 500; }
+.adv-factor-hint { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+
+/* ROIC vs WACC comparison bar */
+.roic-wacc-bar {
+  display: flex; align-items: stretch; gap: 10px; margin: 14px 0; flex-wrap: wrap;
+}
+.rw-cell {
+  flex: 1; min-width: 120px; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 14px; border-radius: 8px; border: 1px solid var(--border);
+}
+.rw-roic { background: var(--accent-soft); }
+.rw-wacc { background: var(--gray-bg); }
+.rw-label { font-size: 12px; color: var(--text-muted); }
+.rw-value { font-size: 26px; font-weight: 700; color: var(--text-heading); margin-top: 4px; }
+.rw-op { display: flex; align-items: center; font-size: 28px; font-weight: 700; }
+.rw-op.rw-normal, .rw-spread.rw-normal { color: var(--green-text); }
+.rw-op.rw-warning, .rw-spread.rw-warning { color: var(--yellow-text); }
+.rw-op.rw-danger, .rw-spread.rw-danger { color: var(--red-text); }
+.rw-op.rw-pending, .rw-spread.rw-pending { color: var(--gray-text); }
+.rw-spread {
+  display: flex; align-items: center; padding: 0 18px; font-size: 16px; font-weight: 700;
+  border-radius: 8px; background: var(--bg-elevated);
+}
+
+/* Advanced sections responsive */
+@media (max-width: 760px) {
+  .zscore-layout, .relative-layout { grid-template-columns: 1fr; }
+  .harvard-matrix { grid-template-columns: 1fr; }
+  .dupont-children { flex-direction: column; }
+  .adv-factor-row { grid-template-columns: repeat(2, 1fr); }
+  .roic-wacc-bar { flex-direction: column; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   Per-section visual identity — each module its own design language.
+   Shared structure stays; palette + signature + typography differ.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Section palette tokens (risk traffic-light colors stay semantic elsewhere) */
+.adv-business  { --sec-accent:#1d6fd6; --sec-ink:#103a63; --sec-soft:#e9f2fc; --sec-tint:#f5f9fe; }
+.adv-risk      { --sec-accent:#d8455a; --sec-ink:#7c2230; --sec-soft:#fdedf0; --sec-tint:#fbf5f6; }
+.adv-valuation { --sec-accent:#6f4bd8; --sec-ink:#3a2785; --sec-soft:#efeafc; --sec-tint:#f7f5fe; --sec-gold:#b8842a; }
+.adv-strategy  { --sec-accent:#1f8a5b; --sec-ink:#14543a; --sec-soft:#e6f5ec; --sec-tint:#f2f9f4; }
+
+/* Themed shared bits follow the section accent */
+.adv-business  .adv-block-title { border-left-color: var(--sec-accent); }
+.adv-risk      .adv-block-title { border-left-color: var(--sec-accent); }
+.adv-valuation .adv-block-title { border-left-color: var(--sec-accent); }
+.adv-strategy  .adv-block-title { border-left-color: var(--sec-accent); }
+.adv-section .adv-diagnosis { border-left-color: var(--sec-accent); background: var(--sec-tint); }
+.adv-section .adv-trend { background: var(--sec-soft); color: var(--sec-ink); }
+.adv-section .adv-factor-val { color: var(--sec-accent); }
+.adv-section .adv-assump { background: var(--sec-soft); }
+.adv-section .adv-assump b { color: var(--sec-ink); }
+.adv-verdict-badge.vb-sec { background: var(--sec-soft); color: var(--sec-accent); }
+
+/* Eyebrow / kicker — encodes the method's essence, styled per section */
+.adv-eyebrow {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--sec-accent); margin-bottom: 8px;
+}
+.adv-eyebrow::before { content: ""; width: 24px; height: 2px; background: var(--sec-accent); }
+
+/* ── 1. Business: engineering blueprint ── */
+.adv-business .adv-eyebrow { font-family: ui-monospace, "Consolas", monospace; letter-spacing: .1em; }
+.adv-business .adv-block {
+  background:
+    linear-gradient(rgba(29,111,214,.05) 1px, transparent 1px) 0 0 / 100% 24px,
+    linear-gradient(90deg, rgba(29,111,214,.05) 1px, transparent 1px) 0 0 / 24px 100%,
+    var(--bg-card);
+}
+.adv-business .adv-ind-val { font-family: ui-monospace, "Consolas", monospace; }
+.adv-business .dupont-eq, .adv-business .dupont-op {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--sec-accent); color: var(--sec-accent);
+  background: var(--bg-card); font-size: 14px; flex: none;
+}
+
+/* ── 2. Risk: monitoring console ── */
+.adv-risk .adv-eyebrow { letter-spacing: .22em; }
+.adv-risk .adv-eyebrow::before {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--sec-accent);
+  box-shadow: 0 0 0 3px rgba(216,69,90,.2);
+}
+.adv-risk .adv-block { border-top: 3px solid var(--sec-accent); }
+.adv-risk .adv-block-title::before {
+  content: "●"; color: var(--sec-accent); font-size: 9px; margin-right: 6px; vertical-align: middle;
+}
+.adv-risk .zscore-gauge-wrap {
+  background: var(--sec-tint); border: 1px solid var(--border); border-radius: 10px; padding: 14px 10px;
+}
+
+/* ── 3. Valuation: valuation terminal, gold value accent + serif numerals ── */
+.adv-valuation .adv-eyebrow {
+  font-family: Georgia, "Times New Roman", serif; font-style: italic;
+  text-transform: none; letter-spacing: .02em; font-size: 13px;
+}
+.adv-valuation .adv-block { border-top: 3px solid var(--sec-gold); }
+.adv-valuation .adv-ind-val, .adv-valuation .rw-value {
+  font-family: Georgia, "Times New Roman", serif; letter-spacing: .01em;
+}
+.adv-valuation .adv-assump b { color: var(--sec-gold); }
+.adv-valuation .rw-roic { background: var(--sec-soft); }
+.adv-valuation .rw-spread { background: #fbf3e0; }
+
+/* ── 4. Strategy: executive brief, editorial paper ── */
+.adv-strategy .adv-eyebrow { font-family: Georgia, "Times New Roman", serif; }
+.adv-strategy .adv-block { background: var(--sec-tint); }
+.adv-strategy .harvard-quad { background: var(--bg-card); border-color: rgba(31,138,91,.28); }
+.adv-strategy .harvard-quad-score { color: var(--sec-accent); }
+.adv-strategy .harvard-bar i { background: linear-gradient(90deg, var(--sec-accent), #67c23a); }
+.adv-strategy .harvard-conclusion {
+  font-family: Georgia, "Times New Roman", serif; font-size: 15px; line-height: 1.7;
+  background: var(--bg-card); border-left: 4px solid var(--sec-accent);
+}
+
+/* ════ Deepened-model sub-components ════ */
+
+/* CVP cost structure bars + sensitivity */
+.cost-struct { display: flex; flex-direction: column; gap: 8px; }
+.cost-row { display: grid; grid-template-columns: 72px 1fr 56px 64px; align-items: center; gap: 10px; font-size: 12px; }
+.cost-name { color: var(--text-heading); font-weight: 500; }
+.cost-track { height: 16px; background: var(--gray-bg); border-radius: 8px; overflow: hidden; }
+.cost-track i { display: block; height: 100%; background: var(--sec-accent); opacity: .85; }
+.cost-pct { font-weight: 700; color: var(--sec-ink); text-align: right; }
+.cost-amt { color: var(--text-muted); text-align: right; }
+.cvp-sens { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
+.cvp-sens-label { font-size: 12px; font-weight: 700; color: var(--sec-ink); }
+.cvp-sens-item { font-size: 12px; padding: 4px 12px; border-radius: 14px; background: var(--sec-soft); color: var(--sec-ink); }
+.cvp-sens-item.up { background: var(--green-bg); color: var(--green-text); }
+.cvp-sens-item.down { background: var(--red-bg); color: var(--red-text); }
+
+/* Z-score distance + factor contribution bars */
+.zscore-dist { font-size: 11px; color: var(--text-muted); margin-top: 6px; text-align: center; }
+.zcontrib { display: flex; flex-direction: column; gap: 7px; }
+.zcontrib-row { display: grid; grid-template-columns: 140px 1fr 52px; align-items: center; gap: 10px; font-size: 12px; }
+.zcontrib-name { color: var(--text-secondary); }
+.zcontrib-track { height: 14px; background: var(--gray-bg); border-radius: 7px; overflow: hidden; display: flex; }
+.zcontrib-track i { display: block; height: 100%; }
+.zcontrib-track i.pos { background: var(--green-border); }
+.zcontrib-track i.neg { background: var(--red-border); }
+.zcontrib-val { font-weight: 700; text-align: right; color: var(--text-heading); }
+
+/* DCF projection + sensitivity tables */
+.dcf-proj, .dcf-sens { overflow-x: auto; margin-top: 4px; }
+.dcf-proj table, .dcf-sens table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.dcf-proj th, .dcf-proj td, .dcf-sens th, .dcf-sens td {
+  border: 1px solid var(--border); padding: 7px 10px; text-align: center;
+}
+.dcf-proj thead th, .dcf-sens thead th { background: var(--sec-soft); color: var(--sec-ink); font-weight: 600; }
+.dcf-proj tbody td:first-child, .dcf-sens tbody th { background: var(--gray-bg); font-weight: 600; color: var(--text-heading); }
+.dcf-proj tbody td:first-child { text-align: left; }
+.dcf-sens .sens-base { background: var(--sec-soft); font-weight: 700; color: var(--sec-ink); outline: 2px solid var(--sec-accent); }
+
+/* Harvard sub-points */
+.harvard-points { margin: 8px 0 0; padding-left: 16px; }
+.harvard-points li { font-size: 11.5px; color: var(--text-secondary); line-height: 1.7; }
+
+@media (max-width: 760px) {
+  .zcontrib-row { grid-template-columns: 100px 1fr 46px; }
+  .cost-row { grid-template-columns: 60px 1fr 48px 54px; }
+}

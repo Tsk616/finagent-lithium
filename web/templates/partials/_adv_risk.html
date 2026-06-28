@@ -1,0 +1,60 @@
+{% from 'partials/_adv_macros.html' import adv_grid %}
+{% set cf = advanced.risk.cashflow %}
+{% set zs = advanced.risk.zscore %}
+<section class="chapter adv-section adv-risk" id="ch-adv-risk">
+  <div class="adv-eyebrow">预警 · EARLY WARNING</div>
+  <h2 class="chapter-title">🛡️ 风险防控型财务分析</h2>
+  <p class="adv-section-intro">从现金流质量与破产距离两个维度，识别潜在财务风险。</p>
+
+  {% if cf and cf.available %}
+  <div class="adv-block">
+    <h3 class="adv-block-title">
+      现金流健康度 · 三表联动
+      {% if cf.pattern and cf.pattern.available %}<span class="adv-verdict-badge vb-{{ cf.pattern.color }}">{{ cf.pattern.signs }} {{ cf.pattern.name }}</span>{% endif %}
+    </h3>
+    <div class="adv-chart" id="chart-cashflow"></div>
+    {% if cf.diagnosis %}<div class="adv-diagnosis">📌 {{ cf.diagnosis }}</div>{% endif %}
+    <h4 class="adv-subtitle">核心指标体检</h4>
+    {{ adv_grid(cf.indicators) }}
+  </div>
+  {% endif %}
+
+  {% if zs and zs.available %}
+  <div class="adv-block">
+    <h3 class="adv-block-title">Z-Score 破产预警</h3>
+    <div class="zscore-layout">
+      <div class="zscore-gauge-wrap">
+        <div class="adv-chart zscore-gauge" id="chart-zscore"></div>
+        <div class="zscore-verdict zscore-{{ zs.chart.color }}">{{ zs.verdict }}</div>
+        <div class="zscore-model">{{ zs.model }}</div>
+        {% if zs.distance and zs.distance.to_safe is not none %}
+        <div class="zscore-dist">
+          距安全线 {{ '%+.2f'|format(zs.distance.to_safe) }} · 距警戒线 {{ '%+.2f'|format(zs.distance.to_distress) }}
+        </div>
+        {% endif %}
+      </div>
+      <div class="zscore-factors">
+        {{ adv_grid(zs.indicators) }}
+      </div>
+    </div>
+
+    {% if zs.contributions %}
+    <h4 class="adv-subtitle">因子贡献分解（系数 × 因子值 = 对 Z 的贡献）</h4>
+    <div class="zcontrib">
+      {% for c in zs.contributions %}
+      <div class="zcontrib-row">
+        <span class="zcontrib-name">{{ c.name }}</span>
+        <div class="zcontrib-track">
+          <i class="{{ 'pos' if c.contribution >= 0 else 'neg' }}"
+             style="width: {{ (c.contribution|abs / 2.0 * 100) if c.contribution|abs < 2 else 100 }}%;"></i>
+        </div>
+        <span class="zcontrib-val">{{ '%+.2f'|format(c.contribution) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if zs.diagnosis %}<div class="adv-diagnosis">📌 {{ zs.diagnosis }}</div>{% endif %}
+  </div>
+  {% endif %}
+</section>
