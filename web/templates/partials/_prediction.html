@@ -1,0 +1,129 @@
+<!-- Six-dimension trend prediction. Dict access uses ["key"] subscripts to
+     avoid Jinja's getattr-before-item pitfall (see commit edcca5b). -->
+{% set pred = prediction %}
+{% set comp = pred["abilities"]["综合财务能力"] %}
+<section class="chapter adv-section adv-prediction" id="ch-prediction">
+  <div class="adv-eyebrow">前瞻 · FORECAST</div>
+  <h2 class="chapter-title">🔮 六维趋势预测（未来一年）</h2>
+  <p class="adv-section-intro">
+    基于历史 {{ pred["history_years"] }} 年时间序列，趋势外推 + 锂电行业周期修正 + 蒙特卡洛模拟，
+    预测 {{ pred["target_year"] }} 年六大财务能力。当前行业周期：<b>{{ pred["cycle_phase"] }}</b>。
+  </p>
+  <div class="adv-assumptions">
+    <span class="adv-assump"><b>目标年度</b>{{ pred["target_year"] }}</span>
+    <span class="adv-assump"><b>行业周期</b>{{ pred["cycle_phase"] }}</span>
+    <span class="adv-assump"><b>历史年数</b>{{ pred["history_years"] }} 年</span>
+    <span class="adv-assump"><b>通用权重</b>{{ pred["weight_split"]["general_pct"] }}%</span>
+    <span class="adv-assump"><b>特殊权重</b>{{ pred["weight_split"]["special_pct"] }}%</span>
+  </div>
+
+  <!-- Composite headline -->
+  <div class="adv-block">
+    <h3 class="adv-block-title">综合财务能力预测</h3>
+    <div class="pred-headline">
+      <div class="pred-score-main">
+        <span class="pred-score-num">{{ comp["baseline"] }}</span>
+        <span class="pred-score-cap">基准预测分</span>
+      </div>
+      <div class="pred-scenarios">
+        <div class="pred-sc pred-sc-opt"><span>乐观</span><b>{{ comp["optimistic"] }}</b></div>
+        <div class="pred-sc pred-sc-base"><span>基准</span><b>{{ comp["baseline"] }}</b></div>
+        <div class="pred-sc pred-sc-pess"><span>悲观</span><b>{{ comp["pessimistic"] }}</b></div>
+      </div>
+      <div class="pred-probs">
+        <div class="pred-prob"><span>P(≥80)</span><b>{{ comp["prob_above_80"] }}%</b></div>
+        <div class="pred-prob"><span>P(≥60)</span><b>{{ comp["prob_above_60"] }}%</b></div>
+        <div class="pred-prob"><span>P(&lt;40)</span><b>{{ comp["prob_below_40"] }}%</b></div>
+      </div>
+    </div>
+    <p class="pred-ci-note">蒙特卡洛 95% 置信区间：[{{ comp["ci_low"] }}, {{ comp["ci_high"] }}]（均值 {{ comp["mc_mean"] }}，标准差 {{ comp["mc_std"] }}）</p>
+  </div>
+
+  <!-- Charts -->
+  <div class="adv-block">
+    <div class="pred-chart-grid">
+      <div>
+        <h4 class="adv-subtitle">六维能力雷达</h4>
+        <div class="chart-container" id="prediction-radar" style="height:360px;"></div>
+      </div>
+      <div>
+        <h4 class="adv-subtitle">三情景对比</h4>
+        <div class="chart-container" id="prediction-scenario" style="height:360px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-dimension table -->
+  <div class="adv-block">
+    <h3 class="adv-block-title">六大能力预测得分</h3>
+    <table class="compare-table pred-table">
+      <thead>
+        <tr><th style="text-align:left;">能力维度</th><th>基准</th><th>乐观</th><th>悲观</th><th>95%CI</th><th>P(≥60)</th></tr>
+      </thead>
+      <tbody>
+        {% for dim in ["盈利能力","运营能力","成长能力","偿债能力","现金能力","综合财务能力"] %}
+        {% set a = pred["abilities"][dim] %}
+        <tr{% if dim == "综合财务能力" %} class="pred-row-total"{% endif %}>
+          <td style="text-align:left;">{{ dim }}</td>
+          <td>{{ a["baseline"] }}</td>
+          <td>{{ a["optimistic"] }}</td>
+          <td>{{ a["pessimistic"] }}</td>
+          <td>[{{ a["ci_low"] }}, {{ a["ci_high"] }}]</td>
+          <td>{{ a["prob_above_60"] }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Indicator-level prediction detail -->
+  {% if pred["indicator_table"] %}
+  <div class="adv-block">
+    <h3 class="adv-block-title">关键指标预测明细</h3>
+    <table class="compare-table pred-table">
+      <thead>
+        <tr><th style="text-align:left;">能力</th><th style="text-align:left;">指标</th><th>历史序列</th><th>预测值</th><th>95%CI</th><th>方法</th><th>权重</th></tr>
+      </thead>
+      <tbody>
+        {% for row in pred["indicator_table"] %}
+        <tr>
+          <td style="text-align:left;">{{ row["ability"] }}</td>
+          <td style="text-align:left;">{{ row["indicator"] }}<small class="pred-cat"> {{ row["category"] }}</small></td>
+          <td class="pred-hist">{{ row["historical_values"]|join(" → ") }}</td>
+          <td><b>{{ row["predicted_value"] }}</b></td>
+          <td>[{{ row["confidence_interval"][0] }}, {{ row["confidence_interval"][1] }}]</td>
+          <td><small>{{ row["method"] }}</small></td>
+          <td>{{ row["weight"] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- LLM scenario narrative -->
+  {% if pred["narrative"] and pred["narrative"]["scenario_summary"] %}
+  {% set nar = pred["narrative"] %}
+  <div class="adv-block">
+    <h3 class="adv-block-title">情景解读 <span class="adv-source-tag">🤖 AI</span></h3>
+    <p class="adv-summary">🧠 {{ nar["scenario_summary"] }}</p>
+    <div class="pred-narr-grid">
+      {% if nar["baseline"] %}<div class="pred-narr pred-narr-base"><b>基准情景</b><p>{{ nar["baseline"] }}</p></div>{% endif %}
+      {% if nar["optimistic"] %}<div class="pred-narr pred-narr-opt"><b>乐观情景</b><p>{{ nar["optimistic"] }}</p></div>{% endif %}
+      {% if nar["pessimistic"] %}<div class="pred-narr pred-narr-pess"><b>悲观情景</b><p>{{ nar["pessimistic"] }}</p></div>{% endif %}
+    </div>
+    {% if nar["key_risks"] %}
+    <div class="pred-lists"><b>关键风险</b>
+      <ul>{% for r in nar["key_risks"] %}<li>{{ r }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    {% if nar["tracking_suggestions"] %}
+    <div class="pred-lists"><b>跟踪建议</b>
+      <ul>{% for s in nar["tracking_suggestions"] %}<li>{{ s }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <p class="pred-disclaimer">⚠️ 预测基于历史趋势外推与行业周期假设，无法预知黑天鹅事件；置信区间越宽，不确定性越高。</p>
+</section>

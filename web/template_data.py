@@ -292,6 +292,9 @@ def build_template_data(state: dict) -> dict:
         # Advanced analysis models (杜邦/CVP/现金流/Z-score/DCF/相对估值/哈佛/EVA)
         "advanced": state.get("advanced_analysis", {}),
         "has_advanced": _advanced_has_content(state.get("advanced_analysis", {})),
+        # Six-dimension trend prediction
+        "prediction": state.get("prediction_analysis", {}),
+        "has_prediction": bool(state.get("prediction_analysis", {}).get("available")),
     }
 
 

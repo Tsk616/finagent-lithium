@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 _KEY_METRICS = [
     "营业收入", "营业成本", "净利润", "总资产", "总负债", "净资产",
     "经营活动现金流净额", "研发费用", "扣非净利润",
+    # Extra balance-sheet items for liquidity/turnover trend series (same Wind
+    # call, just more keys) — feeds the six-dimension prediction engine.
+    "流动资产", "流动负债", "存货", "应收账款", "固定资产",
 ]
 
 
@@ -33,6 +36,13 @@ def _compute_ratio(numerator: Optional[float], denominator: Optional[float]) -> 
     return round(numerator / denominator * 100, 2)
 
 
+def _ratio(numerator: Optional[float], denominator: Optional[float]) -> Optional[float]:
+    """Plain ratio (not a percentage), e.g. turnover times / current ratio."""
+    if numerator is None or denominator is None or denominator == 0:
+        return None
+    return round(numerator / denominator, 2)
+
+
 def _derive_ratios(metrics: Dict[str, List[Optional[float]]], n: int) -> Dict[str, List[Optional[float]]]:
     revenue = metrics.get("营业收入", [None] * n)
     cost = metrics.get("营业成本", [None] * n)
@@ -40,25 +50,34 @@ def _derive_ratios(metrics: Dict[str, List[Optional[float]]], n: int) -> Dict[st
     assets = metrics.get("总资产", [None] * n)
     liabilities = metrics.get("总负债", [None] * n)
     equity = metrics.get("净资产", [None] * n)
+    cur_assets = metrics.get("流动资产", [None] * n)
+    cur_liab = metrics.get("流动负债", [None] * n)
+    inventory = metrics.get("存货", [None] * n)
+    receivables = metrics.get("应收账款", [None] * n)
+    fixed_assets = metrics.get("固定资产", [None] * n)
+
+    def col(seq, i):
+        return seq[i] if i < len(seq) else None
 
     return {
         "销售毛利率": [
             _compute_ratio((revenue[i] or 0) - (cost[i] or 0), revenue[i])
-            if revenue[i] is not None and cost[i] is not None else None
+            if col(revenue, i) is not None and col(cost, i) is not None else None
             for i in range(n)
         ],
-        "资产负债率": [
-            _compute_ratio(liabilities[i], assets[i])
+        "资产负债率": [_compute_ratio(col(liabilities, i), col(assets, i)) for i in range(n)],
+        "净利率": [_compute_ratio(col(profit, i), col(revenue, i)) for i in range(n)],
+        "ROE": [_compute_ratio(col(profit, i), col(equity, i)) for i in range(n)],
+        # Liquidity / turnover series (plain ratios) for the prediction engine.
+        "流动比率": [_ratio(col(cur_assets, i), col(cur_liab, i)) for i in range(n)],
+        "速动比率": [
+            _ratio((col(cur_assets, i) or 0) - (col(inventory, i) or 0), col(cur_liab, i))
+            if col(cur_assets, i) is not None and col(cur_liab, i) is not None else None
             for i in range(n)
         ],
-        "净利率": [
-            _compute_ratio(profit[i], revenue[i])
-            for i in range(n)
-        ],
-        "ROE": [
-            _compute_ratio(profit[i], equity[i])
-            for i in range(n)
-        ],
+        "存货周转率": [_ratio(col(cost, i), col(inventory, i)) for i in range(n)],
+        "应收账款周转率": [_ratio(col(revenue, i), col(receivables, i)) for i in range(n)],
+        "固定资产周转率": [_ratio(col(revenue, i), col(fixed_assets, i)) for i in range(n)],
     }
 
 

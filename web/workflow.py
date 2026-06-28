@@ -492,5 +492,13 @@ def run_pipeline(
         state["advanced_analysis"] = {}
         state["_advanced_error"] = str(exc)
 
+    # ── Six-dimension trend prediction (optional, needs historical series) ──
+    try:
+        from nodes.prediction_model import run_prediction_analysis
+        state["prediction_analysis"] = run_prediction_analysis(state, effective_llm_config)
+    except Exception as exc:
+        state["prediction_analysis"] = {"available": False}
+        state["_prediction_error"] = str(exc)
+
     state["status"] = "completed"
     return state

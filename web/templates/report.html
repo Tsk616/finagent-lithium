@@ -474,6 +474,11 @@
   {% include 'partials/_adv_strategy.html' %}
   {% endif %}
 
+  <!-- ── Six-dimension trend prediction ── -->
+  {% if has_prediction %}
+  {% include 'partials/_prediction.html' %}
+  {% endif %}
+
   <!-- Chapter 6: Summary (investor perspective) -->
   <section class="chapter" id="ch6-summary">
     <h2 class="chapter-title">📝 投资视角总结</h2>
@@ -520,6 +525,7 @@
 <script id="report-markdown-data" type="text/markdown">{{ report_markdown | e }}</script>
 <script id="report-id-data" type="application/json">{{ report_id or "" }}</script>
 {% if has_advanced %}<script id="advanced-data-json" type="application/json">{{ advanced | tojson }}</script>{% endif %}
+{% if has_prediction %}<script id="prediction-data-json" type="application/json">{{ prediction | tojson }}</script>{% endif %}
 
 </div>
 {% endif %}

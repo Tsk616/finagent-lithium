@@ -358,3 +358,75 @@ function switchSubSector(idx) {
     draw();
   }
 })();
+
+// ── Six-dimension trend prediction charts (radar + scenario bars) ──
+(function() {
+  var el = document.getElementById('prediction-data-json');
+  if (!el) return;
+  var pred;
+  try { pred = JSON.parse(el.textContent); } catch(e) { return; }
+  if (!pred || !pred.abilities) return;
+
+  var DIMS = ['盈利能力', '运营能力', '成长能力', '偿债能力', '现金能力'];
+  var C = { blue: '#1d6fd6', orange: '#f5a623', red: '#f56c6c' };
+  var base = {
+    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+    font: { color: '#8a93a5', family: 'system-ui, sans-serif', size: 12 },
+    margin: { t: 24, r: 20, b: 40, l: 50 },
+  };
+  var cfg = { responsive: true, displayModeBar: false };
+
+  function pick(key) {
+    return DIMS.map(function(d) {
+      var a = pred.abilities[d] || {};
+      return (typeof a[key] === 'number') ? a[key] : 0;
+    });
+  }
+
+  function draw() {
+    if (typeof Plotly === 'undefined') { setTimeout(draw, 200); return; }
+
+    // Radar: baseline / optimistic / pessimistic across the five dimensions.
+    try {
+      if (document.getElementById('prediction-radar')) {
+        var theta = DIMS.concat([DIMS[0]]);
+        function loop(arr) { return arr.concat([arr[0]]); }
+        Plotly.newPlot('prediction-radar', [
+          { type: 'scatterpolar', r: loop(pick('optimistic')), theta: theta, name: '乐观',
+            line: { color: C.orange }, fill: 'toself', fillcolor: 'rgba(245,166,35,0.08)' },
+          { type: 'scatterpolar', r: loop(pick('baseline')), theta: theta, name: '基准',
+            line: { color: C.blue }, fill: 'toself', fillcolor: 'rgba(29,111,214,0.15)' },
+          { type: 'scatterpolar', r: loop(pick('pessimistic')), theta: theta, name: '悲观',
+            line: { color: C.red }, fill: 'toself', fillcolor: 'rgba(245,108,108,0.08)' },
+        ], Object.assign({}, base, {
+          polar: { radialaxis: { visible: true, range: [0, 100], gridcolor: 'rgba(125,140,170,0.2)' },
+                   angularaxis: { gridcolor: 'rgba(125,140,170,0.2)' }, bgcolor: 'transparent' },
+          legend: { orientation: 'h', y: -0.12, x: 0.5, xanchor: 'center' },
+          showlegend: true,
+        }), cfg);
+      }
+    } catch (e) {}
+
+    // Scenario grouped bars per dimension.
+    try {
+      if (document.getElementById('prediction-scenario')) {
+        Plotly.newPlot('prediction-scenario', [
+          { type: 'bar', name: '悲观', x: DIMS, y: pick('pessimistic'), marker: { color: C.red } },
+          { type: 'bar', name: '基准', x: DIMS, y: pick('baseline'), marker: { color: C.blue } },
+          { type: 'bar', name: '乐观', x: DIMS, y: pick('optimistic'), marker: { color: C.orange } },
+        ], Object.assign({}, base, {
+          barmode: 'group',
+          yaxis: { range: [0, 100], gridcolor: 'rgba(125,140,170,0.12)', title: '预测得分' },
+          xaxis: { gridcolor: 'rgba(125,140,170,0.12)' },
+          legend: { orientation: 'h', y: -0.18, x: 0.5, xanchor: 'center' },
+        }), cfg);
+      }
+    } catch (e) {}
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', draw);
+  } else {
+    draw();
+  }
+})();
