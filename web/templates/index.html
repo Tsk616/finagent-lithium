@@ -101,6 +101,42 @@
 
         <button type="submit" class="btn-primary" id="submitBtn">开始分析</button>
       </form>
+
+      <div class="workspace-grid" style="margin-top:18px;">
+        <section class="side-card">
+          <div class="section-heading compact">
+            <span class="eyebrow">How It Works</span>
+            <h3>三步生成分析报告</h3>
+          </div>
+          <div class="guide-list">
+            <div><strong>1 · 提供数据</strong><span>上传年报 Excel/PDF，或只填公司名称与股票代码，系统自动从 Wind 拉取财务数据。</span></div>
+            <div><strong>2 · 自动分析</strong><span>识别赛道 → 计算通用+赛道专属指标 → 联动诊断、异常扫描、估值与六维预测。</span></div>
+            <div><strong>3 · 阅读与追问</strong><span>报告支持图表交互、Markdown 下载和基于报告上下文的 AI 追问。</span></div>
+          </div>
+          <a class="btn-secondary" href="/demo" style="margin-top:12px;display:inline-block;">⚡ 先看一份宁德时代示例</a>
+        </section>
+        <section class="side-card">
+          <div class="section-heading compact">
+            <span class="eyebrow">Recent</span>
+            <h3>最近报告</h3>
+          </div>
+          {% if history_items %}
+          <div class="history-list">
+            {% for item in history_items[:4] %}
+            <a class="history-item" href="/report/{{ item.report_id }}">
+              <strong>{{ item.company_name }}</strong>
+              <span>{{ item.current_period or "报告期未注明" }}{% if item.weighted_score is not none %} · 评分 {{ item.weighted_score }}{% endif %}</span>
+              <small>{{ item.generated_at }}</small>
+            </a>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="muted-copy">还没有分析记录。上传一份年报，或点左侧示例马上体验。</p>
+          {% endif %}
+          <div id="uploadLocalHistoryBox" class="local-history-box"
+               data-server-ids='{{ history_items | map(attribute="report_id") | list | tojson }}'></div>
+        </section>
+      </div>
     </section>
 
     <section class="feature-panel" id="panel-report" data-feature-panel="report">

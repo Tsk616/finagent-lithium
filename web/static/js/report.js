@@ -114,14 +114,16 @@ function switchSubSector(idx) {
   var data;
   try { data = JSON.parse(el.textContent); } catch(e) { return; }
 
-  var darkLayout = {
+  // Light-theme chart tokens (match style.css --text-secondary / --border);
+  // the old dark-theme values left axis text near-invisible on white cards.
+  var chartTheme = {
     paper_bgcolor: 'transparent',
     plot_bgcolor: 'transparent',
-    font: { color: '#c0c4cc', family: 'system-ui, sans-serif', size: 12 },
+    font: { color: '#496681', family: 'system-ui, sans-serif', size: 12 },
     margin: { t: 20, r: 20, b: 40, l: 60 },
     legend: { orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
-    xaxis: { gridcolor: 'rgba(255,255,255,0.06)' },
-    yaxis: { gridcolor: 'rgba(255,255,255,0.06)' },
+    xaxis: { gridcolor: 'rgba(33,54,77,0.10)' },
+    yaxis: { gridcolor: 'rgba(33,54,77,0.10)' },
   };
   var plotConfig = { responsive: true, displayModeBar: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] };
 
@@ -145,11 +147,11 @@ function switchSubSector(idx) {
           marker: { size: 6 }
         });
       }
-      var layout = Object.assign({}, darkLayout, {
+      var layout = Object.assign({}, chartTheme, {
         margin: { t: 50, r: 20, b: 40, l: 60 },
         legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: 1.12, yanchor: 'bottom' },
-        yaxis: Object.assign({}, darkLayout.yaxis, { title: '营业收入(亿元)', automargin: true }),
-        yaxis2: { title: '净利润(亿元)', overlaying: 'y', side: 'right', gridcolor: 'rgba(255,255,255,0.03)', font: { color: '#f5a623' }, automargin: true },
+        yaxis: Object.assign({}, chartTheme.yaxis, { title: '营业收入(亿元)', automargin: true }),
+        yaxis2: { title: '净利润(亿元)', overlaying: 'y', side: 'right', gridcolor: 'rgba(33,54,77,0.05)', font: { color: '#b8842a' }, automargin: true },
       });
       Plotly.newPlot('chart-revenue-profit', traces, layout, plotConfig);
     }
@@ -167,8 +169,8 @@ function switchSubSector(idx) {
         });
         i++;
       }
-      var ratioLayout = Object.assign({}, darkLayout, {
-        yaxis: Object.assign({}, darkLayout.yaxis, { title: '百分比(%)' }),
+      var ratioLayout = Object.assign({}, chartTheme, {
+        yaxis: Object.assign({}, chartTheme.yaxis, { title: '百分比(%)' }),
       });
       Plotly.newPlot('chart-ratios', ratioTraces, ratioLayout, plotConfig);
     }
@@ -189,7 +191,7 @@ function switchSubSector(idx) {
       }], {
         paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
         margin: { t: 2, r: 4, b: 14, l: 4 },
-        xaxis: { showgrid: false, tickfont: { size: 9, color: '#666' } },
+        xaxis: { showgrid: false, tickfont: { size: 9, color: '#64758b' } },
         yaxis: { showgrid: false, showticklabels: false },
         showlegend: false,
       }, { responsive: true, displayModeBar: false, staticPlot: true });
@@ -214,10 +216,10 @@ function switchSubSector(idx) {
             violet: '#6f4bd8', gold: '#b8842a' };
   var base = {
     paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-    font: { color: '#8a93a5', family: 'system-ui, sans-serif', size: 12 },
+    font: { color: '#496681', family: 'system-ui, sans-serif', size: 12 },
     margin: { t: 24, r: 20, b: 40, l: 50 },
-    xaxis: { gridcolor: 'rgba(125,140,170,0.12)' },
-    yaxis: { gridcolor: 'rgba(125,140,170,0.12)' },
+    xaxis: { gridcolor: 'rgba(33,54,77,0.10)' },
+    yaxis: { gridcolor: 'rgba(33,54,77,0.10)' },
   };
   var cfg = { responsive: true, displayModeBar: false };
   function num(v) { return (typeof v === 'number' && isFinite(v)) ? v : null; }
@@ -369,7 +371,7 @@ function switchSubSector(idx) {
   var C = { blue: '#1d6fd6', orange: '#f5a623', red: '#f56c6c' };
   var base = {
     paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
-    font: { color: '#8a93a5', family: 'system-ui, sans-serif', size: 12 },
+    font: { color: '#496681', family: 'system-ui, sans-serif', size: 12 },
     margin: { t: 24, r: 20, b: 40, l: 50 },
   };
   var cfg = { responsive: true, displayModeBar: false };
