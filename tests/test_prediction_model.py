@@ -112,3 +112,72 @@ def test_run_prediction_analysis_insufficient_history_degrades():
     }
     out = run_prediction_analysis(state, llm_config={"api_key": ""})
     assert out["available"] is False
+
+
+# ── Live lithium cycle derivation ─────────────────────────────────────
+# WHY: the cycle phase scales every cycle-sensitive forecast. If live-price
+# mapping breaks (wrong band, wrong unit, junk input), predictions silently
+# shift regime — these pin the 9-cell contract and the fallback path.
+
+from nodes.prediction_model import derive_cycle_from_trend
+
+
+def test_derive_cycle_high_price_rising_is_top():
+    cycle = derive_cycle_from_trend({"current": 180000, "trend": "上涨", "change_3m_pct": 12.0})
+    assert cycle["phase"] == "顶部"
+    assert cycle["source"] == "live_wind"
+    assert 85 <= cycle["index"] <= 95  # base 90 + capped nudge
+
+
+def test_derive_cycle_low_price_falling_is_bottom():
+    cycle = derive_cycle_from_trend({"current": 60000, "trend": "下跌", "change_3m_pct": -20.0})
+    assert cycle["phase"] == "底部"
+    assert cycle["index"] <= 40  # nudge is negative, capped at -5
+
+
+def test_derive_cycle_tolerates_wan_yuan_unit():
+    # A feed quoting 万元/吨 (e.g. 9.5) must land in the same band as 95000
+    a = derive_cycle_from_trend({"current": 9.5, "trend": "震荡", "change_3m_pct": 0.0})
+    b = derive_cycle_from_trend({"current": 95000, "trend": "震荡", "change_3m_pct": 0.0})
+    assert a["phase"] == b["phase"] == "复苏期"
+
+
+def test_derive_cycle_unusable_input_returns_none():
+    assert derive_cycle_from_trend(None) is None
+    assert derive_cycle_from_trend({}) is None
+    assert derive_cycle_from_trend({"current": -5, "trend": "上涨"}) is None
+    assert derive_cycle_from_trend({"current": 100000, "trend": "unknown"}) is None
+
+
+def _history_state():
+    return {
+        "historical_data": {
+            "periods": ["2022年报", "2023年报", "2024年报", "2025年报"],
+            "derived_ratios": {
+                "销售毛利率": HISTORY["销售毛利率"],
+                "净利率": HISTORY["扣非销售净利率"],
+                "资产负债率": HISTORY["资产负债率"],
+                "速动比率": HISTORY["速动比率"],
+                "存货周转率": HISTORY["存货周转率"],
+            },
+            "metrics": {},
+        },
+        "current_period": "2025年报",
+        "_sector_code": None,
+        "company_name": "测试公司",
+    }
+
+
+def test_run_prediction_uses_live_trend_over_static_table():
+    state = _history_state()
+    state["_lithium_trend"] = {"current": 180000, "trend": "上涨", "change_3m_pct": 10.0}
+    result = run_prediction_analysis(state, llm_config={"api_key": ""})
+    assert result.get("available") is True, result.get("reason")
+    assert result["cycle_source"] == "live_wind"
+    assert result["cycle_phase"] == "顶部"
+
+
+def test_run_prediction_falls_back_to_static_table_without_trend():
+    result = run_prediction_analysis(_history_state(), llm_config={"api_key": ""})
+    assert result.get("available") is True, result.get("reason")
+    assert result["cycle_source"] == "static_table"

@@ -55,7 +55,10 @@ INDICATOR_PREDICTION_METHODS = {
 }
 
 
-# ── Lithium industry cycle index (static; TODO: wire live lithium trend) ──
+# ── Lithium industry cycle index ──────────────────────────────────────
+# Static fallback table, used only when no live lithium trend is available
+# (see derive_cycle_from_trend). Years beyond the table fall back to the
+# default in run_prediction_analysis.
 LITHIUM_CYCLE_INDEX = {
     "2021": {"index": 85, "phase": "上行期"},
     "2022": {"index": 95, "phase": "顶部"},
@@ -66,6 +69,41 @@ LITHIUM_CYCLE_INDEX = {
     "2027": {"index": 70, "phase": "上行期"},
     "2028": {"index": 72, "phase": "上行期"},
 }
+
+_DEFAULT_CYCLE = {"index": 60, "phase": "复苏期"}
+
+
+def derive_cycle_from_trend(lithium_trend: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Map a live lithium price trend to a cycle {index, phase, source}.
+
+    Classification: price level band (低 <8万 / 中 8-15万 / 高 >15万 元/吨)
+    × direction (上涨/下跌/震荡) -> 9-cell phase table; the 3-month change
+    nudges the index by up to ±5. Returns None when the trend is unusable,
+    letting the caller fall back to the static table.
+    """
+    if not lithium_trend:
+        return None
+    price = lithium_trend.get("current")
+    direction = lithium_trend.get("trend")
+    if not isinstance(price, (int, float)) or price <= 0 or direction not in ("上涨", "下跌", "震荡"):
+        return None
+    if price < 1000:  # tolerate 万元/吨-scaled feeds
+        price *= 10000
+
+    level = "low" if price < 80_000 else ("high" if price > 150_000 else "mid")
+    table = {
+        ("low", "下跌"): ("底部", 40), ("low", "震荡"): ("底部", 45), ("low", "上涨"): ("复苏期", 55),
+        ("mid", "下跌"): ("下行期", 55), ("mid", "震荡"): ("复苏期", 60), ("mid", "上涨"): ("上行期", 70),
+        ("high", "下跌"): ("下行期", 70), ("high", "震荡"): ("顶部", 85), ("high", "上涨"): ("顶部", 90),
+    }
+    phase, base = table[(level, direction)]
+    chg = lithium_trend.get("change_3m_pct") or 0.0
+    try:
+        nudge = max(-5.0, min(5.0, float(chg) / 2))
+    except (TypeError, ValueError):
+        nudge = 0.0
+    index = int(max(0, min(100, base + nudge)))
+    return {"index": index, "phase": phase, "source": "live_wind"}
 
 CYCLE_ADJUSTMENT_FACTORS = {
     "销售毛利率": {"上行期": 1.08, "下行期": 0.92, "底部": 0.95, "顶部": 1.02, "复苏期": 1.05},
@@ -131,10 +169,12 @@ _TYPE_BY_NAME = {_norm(n): t for t, names in _TYPE_LISTS.items() for n in names}
 class PredictionEngine:
     """Trend + cycle + Monte-Carlo forecaster over indicator time series."""
 
-    def __init__(self, track_weights: Dict[str, Dict], cycle_year: str = "2026"):
+    def __init__(self, track_weights: Dict[str, Dict], cycle_year: str = "2026",
+                 cycle_info: Optional[Dict[str, Any]] = None):
         self.track_weights = track_weights
         self.cycle_year = str(cycle_year)
-        self.cycle_info = LITHIUM_CYCLE_INDEX.get(self.cycle_year, {"index": 60, "phase": "复苏期"})
+        # Live-derived cycle wins; static table only as fallback
+        self.cycle_info = cycle_info or LITHIUM_CYCLE_INDEX.get(self.cycle_year, dict(_DEFAULT_CYCLE))
 
     # ── base forecast methods ──
     def _linear_trend_predict(self, values: List[float]) -> float:
@@ -508,9 +548,18 @@ def run_prediction_analysis(state: Dict[str, Any],
     periods = historical.get("periods") or []
     target_year = _next_year(state.get("current_period", ""), periods)
     cycle_year = str(target_year)
-    cycle_phase = LITHIUM_CYCLE_INDEX.get(cycle_year, {"phase": "复苏期"})["phase"]
 
-    eng = PredictionEngine(track_weights, cycle_year=cycle_year)
+    # Live lithium price trend (fetched earlier in the pipeline) wins over
+    # the static year table; mark the source so the report can show it.
+    live_cycle = derive_cycle_from_trend(state.get("_lithium_trend"))
+    if live_cycle:
+        cycle_info = live_cycle
+    else:
+        cycle_info = {**LITHIUM_CYCLE_INDEX.get(cycle_year, dict(_DEFAULT_CYCLE)),
+                      "source": "static_table"}
+    cycle_phase = cycle_info["phase"]
+
+    eng = PredictionEngine(track_weights, cycle_year=cycle_year, cycle_info=cycle_info)
     baseline = eng.predict_abilities(series, "baseline")
     optimistic = eng.predict_abilities(series, "optimistic")
     pessimistic = eng.predict_abilities(series, "pessimistic")
@@ -520,6 +569,8 @@ def run_prediction_analysis(state: Dict[str, Any],
         "available": True,
         "target_year": target_year,
         "cycle_phase": cycle_phase,
+        "cycle_index": cycle_info.get("index"),
+        "cycle_source": cycle_info.get("source", "static_table"),
         "history_years": history_years,
         "weight_split": _weight_split(track_weights),
         "abilities": _assemble(baseline, optimistic, pessimistic, mc),

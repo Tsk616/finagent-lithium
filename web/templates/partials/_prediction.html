@@ -7,11 +7,12 @@
   <h2 class="chapter-title">🔮 六维趋势预测（未来一年）</h2>
   <p class="adv-section-intro">
     基于历史 {{ pred["history_years"] }} 年时间序列，趋势外推 + 锂电行业周期修正 + 蒙特卡洛模拟，
-    预测 {{ pred["target_year"] }} 年六大财务能力。当前行业周期：<b>{{ pred["cycle_phase"] }}</b>。
+    预测 {{ pred["target_year"] }} 年六大财务能力。当前行业周期：<b>{{ pred["cycle_phase"] }}</b>
+    {%- if pred.get("cycle_source") == "live_wind" %}（由实时锂价推导）{% else %}（静态周期表）{% endif %}。
   </p>
   <div class="adv-assumptions">
     <span class="adv-assump"><b>目标年度</b>{{ pred["target_year"] }}</span>
-    <span class="adv-assump"><b>行业周期</b>{{ pred["cycle_phase"] }}</span>
+    <span class="adv-assump"><b>行业周期</b>{{ pred["cycle_phase"] }}{% if pred.get("cycle_index") is not none %} · 指数 {{ pred["cycle_index"] }}{% endif %}</span>
     <span class="adv-assump"><b>历史年数</b>{{ pred["history_years"] }} 年</span>
     <span class="adv-assump"><b>通用权重</b>{{ pred["weight_split"]["general_pct"] }}%</span>
     <span class="adv-assump"><b>特殊权重</b>{{ pred["weight_split"]["special_pct"] }}%</span>
