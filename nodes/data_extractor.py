@@ -243,11 +243,16 @@ def _find_number_in_row(row, skip_col: int) -> Optional[float]:
 # ── PDF extraction ────────────────────────────────────────────────────
 
 def extract_from_pdf(file_path: str) -> Dict[str, Optional[float]]:
-    """Extract financial data from a PDF using pdftotext + keyword matching."""
-    # Try pdftotext
+    """Extract financial data from a PDF using pdftotext + keyword matching.
+
+    Falls back to pdfplumber (pure Python) when the pdftotext binary is
+    unavailable -- e.g. on PaaS images without poppler-utils.
+    """
     text = _pdftotext(file_path)
     if not text:
-        raise RuntimeError("无法解析PDF。请确保 pdftotext 已安装，或使用 Excel 格式上传。")
+        text = _pdfplumber_text(file_path)
+    if not text:
+        raise RuntimeError("无法解析PDF。请确认文件未加密且包含文本层，或使用 Excel 格式上传。")
 
     result: Dict[str, Optional[float]] = {}
     unit_label, multiplier = detect_unit(text[:2000])
@@ -286,6 +291,22 @@ def _pdftotext(file_path: str) -> str:
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
     return ""
+
+
+def _pdfplumber_text(file_path: str) -> str:
+    """Extract PDF text with pdfplumber (no external binary needed)."""
+    try:
+        import pdfplumber
+    except ImportError:
+        return ""
+    try:
+        parts = []
+        with pdfplumber.open(file_path) as pdf:
+            for page in pdf.pages:
+                parts.append(page.extract_text() or "")
+        return "\n".join(parts).strip()
+    except Exception:
+        return ""
 
 
 # ── Deduplication ─────────────────────────────────────────────────────

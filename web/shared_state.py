@@ -27,6 +27,7 @@ REPORT_STATES: dict = {}
 JOBS: dict = {}
 JOBS_LOCK = threading.Lock()
 MAX_CONCURRENT = 2  # cap simultaneous pipelines to protect the 512MB worker
+JOB_STUCK_SECONDS = 600  # a "running" job older than this is presumed dead
 
 
 def _prune_locked(max_age_seconds: float) -> None:
@@ -34,6 +35,13 @@ def _prune_locked(max_age_seconds: float) -> None:
     stale = [jid for jid, j in JOBS.items() if j["created_at"] < cutoff]
     for jid in stale:
         JOBS.pop(jid, None)
+    # A crashed worker thread never updates its job; time it out so it stops
+    # occupying one of the MAX_CONCURRENT slots for a full prune cycle.
+    stuck_cutoff = time.time() - JOB_STUCK_SECONDS
+    for j in JOBS.values():
+        if j["status"] == "running" and j["created_at"] < stuck_cutoff:
+            j["status"] = "error"
+            j["error"] = "任务超时（服务可能繁忙或已重启），请重新提交分析。"
 
 
 def create_job():
@@ -66,6 +74,7 @@ def update_job(job_id: str, **fields) -> None:
 def get_job(job_id: str):
     """Return a copy of the job record, or None if unknown."""
     with JOBS_LOCK:
+        _prune_locked(3600)  # polling is frequent; keep stuck jobs from wedging slots
         job = JOBS.get(job_id)
         return dict(job) if job else None
 

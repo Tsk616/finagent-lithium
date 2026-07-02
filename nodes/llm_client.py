@@ -78,26 +78,38 @@ def call_llm(
         }
         url = f"{base_url}/chat/completions"
 
-    try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=cfg.get("timeout", 12))
-        resp.raise_for_status()
-        data = resp.json()
-        if is_anthropic:
-            for block in data.get("content", []):
-                if block.get("type") == "text":
-                    return block["text"]
-        else:
-            choices = data.get("choices") or []
-            if choices:
-                message = choices[0].get("message") or {}
-                content = message.get("content")
-                if content:
-                    return content
-        return None
-    except Exception as e:
-        status = getattr(getattr(e, "response", None), "status_code", None)
-        print(f"[LLM] API call failed: {e}; status={status}; url={url}")
-        return None
+    # One retry with backoff: transient network drops / 429 / 5xx are common
+    # enough on the free tier that a single retry meaningfully cuts silent
+    # degradation. 4xx (except 429) are permanent -- don't retry those.
+    last_err = None
+    for attempt in range(2):
+        try:
+            resp = requests.post(url, headers=headers, json=payload, timeout=cfg.get("timeout", 12))
+            resp.raise_for_status()
+            data = resp.json()
+            if is_anthropic:
+                for block in data.get("content", []):
+                    if block.get("type") == "text":
+                        return block["text"]
+            else:
+                choices = data.get("choices") or []
+                if choices:
+                    message = choices[0].get("message") or {}
+                    content = message.get("content")
+                    if content:
+                        return content
+            return None
+        except Exception as e:
+            last_err = e
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            retryable = status is None or status == 429 or status >= 500
+            if attempt == 0 and retryable:
+                import time
+                time.sleep(1.5)
+                continue
+            print(f"[LLM] API call failed: {last_err}; status={status}; url={url}")
+            return None
+    return None
 
 
 def _mock_response(system_prompt: str, user_message: str) -> Optional[str]:

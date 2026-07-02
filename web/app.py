@@ -14,9 +14,10 @@ _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template, request
 from web.routes import register_blueprints
 from web.workflow import KB
+from web.shared_state import REPORT_HISTORY
 
 # Backward-compatible re-exports: external code (tests)
 # imports _build_template_data and shared state from web.app
@@ -28,6 +29,14 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024  # 32MB max upload
 
 register_blueprints(app)
+
+
+@app.errorhandler(413)
+def request_too_large(e):
+    msg = "上传文件过大（上限 32MB）。请压缩或拆分后重试。"
+    if request.path.startswith("/api/"):
+        return jsonify({"status": "error", "message": msg}), 413
+    return render_template("index.html", error=msg, history_items=list(REPORT_HISTORY)), 413
 
 
 @app.route("/health")
@@ -43,7 +52,7 @@ def health():
 if __name__ == "__main__":
     import os as _os
     port = int(_os.environ.get("PORT", 5002))
-    debug = _os.environ.get("FLASK_DEBUG", "1") == "1"
+    debug = _os.environ.get("FLASK_DEBUG", "0") == "1"
     print(f"FinAgent-Lithium Web UI")
     print(f"KB loaded: {KB is not None}")
     print(f"Starting at http://localhost:{port}")

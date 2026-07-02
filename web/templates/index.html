@@ -6,7 +6,7 @@
 <title>FinAgent-Lithium</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="workbench-body" data-initial-panel="{{ initial_panel or 'upload' }}">
+<body class="workbench-body" data-initial-panel="{{ initial_panel or 'upload' }}"{% if auto_demo_period %} data-auto-demo-period="{{ auto_demo_period }}"{% endif %}>
 
 {% include 'partials/_loading.html' %}
 

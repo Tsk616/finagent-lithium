@@ -128,7 +128,9 @@ def api_peer_compare():
 
 def _extract_uploaded_file(file_obj) -> dict:
     """Save uploaded file to a temp path, extract financials, clean up."""
-    suffix = os.path.splitext(file_obj.filename)[1]
+    suffix = os.path.splitext(file_obj.filename)[1].lower()
+    if suffix not in {".xlsx", ".xls", ".pdf"}:
+        raise ValueError(f"不支持的文件格式: {suffix}。请上传 .xlsx/.xls/.pdf 文件。")
     fd, tmp_path = tempfile.mkstemp(suffix=suffix)
     os.close(fd)
     try:

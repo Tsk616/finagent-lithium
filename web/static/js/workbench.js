@@ -375,6 +375,38 @@ function sendHistoryChat(reportId) {
   });
 }
 
+// ── Auto-start demo analysis (arriving via /demo) ──
+function startDemoAnalyze(period) {
+  startLoading();
+  document.getElementById('loadingSub').textContent = '正在启动示例分析（宁德时代）…';
+  fetch('/api/demo/start', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ period: period })
+  })
+    .then(function(resp) {
+      if (resp.status === 429) throw new Error('BUSY');
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.json();
+    })
+    .then(function(data) {
+      if (!data.job_id) throw new Error('NO_JOB');
+      pollStatus(data.job_id);
+    })
+    .catch(function(err) {
+      if (err.message === 'BUSY') {
+        finishWithError('服务繁忙（已有分析在进行中），请稍候再试。');
+      } else {
+        finishWithError('启动示例分析失败，请重试。');
+      }
+    });
+}
+
+(function() {
+  var demoPeriod = document.body.getAttribute('data-auto-demo-period');
+  if (demoPeriod) startDemoAnalyze(demoPeriod);
+})();
+
 // ── Startup health check ──
 (function() {
   var banner = document.getElementById('startupBanner');

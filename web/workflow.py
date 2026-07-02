@@ -192,10 +192,20 @@ def run_pipeline(
         "期初存货": "存货同比增速",
         "期初净资产": "扣非ROE",
     }
+    def _has_prior_alias(key: str) -> bool:
+        """True if an alternate naming of a prior-period account already exists
+        (e.g. '营业收入上期' for '上期营业收入'), so no LLM supplement needed."""
+        if key.startswith("上期"):
+            alts = (key[2:] + "上期",)
+        elif key.startswith("期初"):
+            alts = (key[2:] + "期初", "上期" + key[2:])
+        else:
+            return False
+        return any(financial_data.get(a) is not None for a in alts)
+
     missing_critical = [k for k in _CRITICAL_FOR_INDICATORS if financial_data.get(k) is None]
     missing_prior = [k for k in _PRIOR_FOR_YOY
-                     if financial_data.get(k) is None
-                     and not financial_data.get(k.replace("上期", "").replace("期初", "") + "上期")]
+                     if financial_data.get(k) is None and not _has_prior_alias(k)]
     all_missing = missing_critical + missing_prior
 
     if all_missing and (company_name or stock_code):
@@ -240,6 +250,14 @@ def run_pipeline(
     effective_llm_config = llm_config
     if not financial_data or state.get("data_completeness", 0) <= 0:
         effective_llm_config = {**(llm_config or {}), "api_key": ""}
+
+    # Surface whether LLM sections are real or mock placeholders (no key ->
+    # llm_client returns fabricated demo content; the report must say so).
+    from nodes.llm_client import DEFAULT_CONFIG as _llm_defaults
+    if effective_llm_config is not None and "api_key" in effective_llm_config:
+        state["_llm_available"] = bool(effective_llm_config["api_key"])
+    else:
+        state["_llm_available"] = bool(_llm_defaults.get("api_key") or os.environ.get("DEEPSEEK_API_KEY"))
 
     # Node 3: calculate_general
     _emit(3, "计算指标与评分")

@@ -8,7 +8,10 @@ Does NOT handle HTTP concerns (request parsing, response building).
 """
 
 import json
+import re
 from typing import Optional
+
+from markupsafe import Markup, escape
 
 
 # Wind code -> company short name lookup (common lithium battery peers)
@@ -88,6 +91,38 @@ def format_peer_data(peers: list) -> list:
             item["roe"] = "-"
         result.append(item)
     return result
+
+
+def render_summary_html(report_markdown: str) -> Markup:
+    """Extract the '六、总结' section and render it as safe HTML.
+
+    The markdown mixes user input and LLM free text, so it must be escaped
+    before any formatting is applied -- never pipe it through `| safe` raw.
+    Only a minimal subset is formatted: bold, bullet lines, paragraphs.
+    """
+    if "## 六、总结" not in (report_markdown or ""):
+        return Markup("")
+    section = report_markdown.split("## 六、总结")[1].split("---")[0]
+
+    html_lines = []
+    in_list = False
+    for raw_line in section.strip().splitlines():
+        line = str(escape(raw_line.strip()))
+        line = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", line)
+        if line.startswith(("- ", "* ")):
+            if not in_list:
+                html_lines.append("<ul>")
+                in_list = True
+            html_lines.append(f"<li>{line[2:]}</li>")
+            continue
+        if in_list:
+            html_lines.append("</ul>")
+            in_list = False
+        if line:
+            html_lines.append(f"<p>{line}</p>")
+    if in_list:
+        html_lines.append("</ul>")
+    return Markup("\n".join(html_lines))
 
 
 def parse_json_field(raw: str) -> dict:
@@ -251,6 +286,7 @@ def build_template_data(state: dict) -> dict:
         "skipped_external": state.get("skipped_external_rules", 0),
         "error_log": state.get("error_log", []),
         "report_markdown": state.get("report_markdown", ""),
+        "investor_summary_html": render_summary_html(state.get("report_markdown", "")),
         "weighted_score": state.get("weighted_score", {}),
         "metric_config_summary": state.get("metric_config_summary", {}),
         "metric_settings_groups": group_metric_settings(metric_settings_items),
@@ -270,6 +306,7 @@ def build_template_data(state: dict) -> dict:
         "core_ratios": core_ratios,
         "risk_assessment": risk_assessment,
         "wind_status": state.get("wind_status", {}),
+        "llm_available": state.get("_llm_available", True),
         "wind_fetch_attempted": state.get("_wind_fetch_attempted", False),
         "wind_fetch_error": state.get("_wind_fetch_error", ""),
         "industry_comparison": state.get("industry_comparison", {}),

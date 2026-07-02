@@ -53,6 +53,11 @@
 	  📊 财报数据由万得 Wind 金融数据服务提供（{{ wind_accounts_count }} 个科目）
 	</div>
 	{% endif %}
+	{% if llm_available is defined and not llm_available %}
+	<div style="text-align:center;padding:8px 16px;margin-bottom:16px;background:var(--yellow-bg);border:1px solid var(--yellow-border);border-radius:var(--radius);font-size:13px;color:var(--yellow-text);">
+	  ⚠ LLM 服务未配置：本报告中的 AI 生成章节（联动诊断、总结等）为演示占位内容，仅数值指标可信
+	</div>
+	{% endif %}
 
 <nav class="report-nav" aria-label="报告章节导航">
   <a href="#ch5b-macro">宏观背景</a>
@@ -486,7 +491,7 @@
   <section class="chapter" id="ch6-summary">
     <h2 class="chapter-title">📝 投资视角总结</h2>
     <div class="summary-box investor-summary">
-      {{ report_markdown.split('## 六、总结')[1].split('---')[0] | safe if '## 六、总结' in report_markdown else '' }}
+      {{ investor_summary_html }}
     </div>
   </section>
 
