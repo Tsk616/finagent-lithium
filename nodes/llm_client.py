@@ -51,32 +51,7 @@ def call_llm(
     except ImportError:
         return _mock_response(system_prompt, user_message)
 
-    base_url = str(cfg.get("base_url", "")).rstrip("/")
-    is_anthropic = "/anthropic" in base_url
-    headers = {"Content-Type": "application/json"}
-    if is_anthropic:
-        headers["anthropic-version"] = "2023-06-01"
-        headers["x-api-key"] = cfg["api_key"]
-        payload = {
-            "model": cfg["model"],
-            "max_tokens": cfg["max_tokens"],
-            "temperature": cfg["temperature"],
-            "system": system_prompt,
-            "messages": [{"role": "user", "content": user_message}],
-        }
-        url = f"{base_url}/v1/messages"
-    else:
-        headers["Authorization"] = f"Bearer {cfg['api_key']}"
-        payload = {
-            "model": cfg["model"],
-            "max_tokens": cfg["max_tokens"],
-            "temperature": cfg["temperature"],
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
-            ],
-        }
-        url = f"{base_url}/chat/completions"
+    url, headers, payload, is_anthropic = _build_request(cfg, system_prompt, user_message)
 
     # One retry with backoff: transient network drops / 429 / 5xx are common
     # enough on the free tier that a single retry meaningfully cuts silent
@@ -110,6 +85,101 @@ def call_llm(
             print(f"[LLM] API call failed: {last_err}; status={status}; url={url}")
             return None
     return None
+
+
+def _build_request(cfg: Dict[str, Any], system_prompt: str, user_message: str):
+    """Build (url, headers, payload) for either API dialect."""
+    base_url = str(cfg.get("base_url", "")).rstrip("/")
+    is_anthropic = "/anthropic" in base_url
+    headers = {"Content-Type": "application/json"}
+    if is_anthropic:
+        headers["anthropic-version"] = "2023-06-01"
+        headers["x-api-key"] = cfg["api_key"]
+        payload = {
+            "model": cfg["model"],
+            "max_tokens": cfg["max_tokens"],
+            "temperature": cfg["temperature"],
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_message}],
+        }
+        url = f"{base_url}/v1/messages"
+    else:
+        headers["Authorization"] = f"Bearer {cfg['api_key']}"
+        payload = {
+            "model": cfg["model"],
+            "max_tokens": cfg["max_tokens"],
+            "temperature": cfg["temperature"],
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+        }
+        url = f"{base_url}/chat/completions"
+    return url, headers, payload, is_anthropic
+
+
+def call_llm_stream(
+    system_prompt: str,
+    user_message: str,
+    config: Optional[Dict[str, Any]] = None,
+):
+    """Stream the LLM response as text chunks (generator).
+
+    Handles both SSE dialects: OpenAI Chat Completions (default DeepSeek
+    endpoint) and Anthropic Messages (base_url containing '/anthropic').
+    Yields nothing at all on failure so the caller can fall back to the
+    non-streaming path. No API key -> yields the mock response once.
+    """
+    cfg = {**DEFAULT_CONFIG, **(config or {})}
+
+    if not cfg["api_key"]:
+        mock = _mock_response(system_prompt, user_message)
+        if mock:
+            yield mock
+        return
+
+    try:
+        import requests
+    except ImportError:
+        return
+
+    url, headers, payload, is_anthropic = _build_request(cfg, system_prompt, user_message)
+    payload["stream"] = True
+
+    try:
+        # Tuple timeout: 10s connect, read timeout applies BETWEEN chunks
+        resp = requests.post(url, headers=headers, json=payload, stream=True,
+                             timeout=(10, cfg.get("timeout", 60)))
+        resp.raise_for_status()
+        for raw_line in resp.iter_lines(decode_unicode=True):
+            if not raw_line or not raw_line.startswith("data:"):
+                continue
+            data_str = raw_line[5:].strip()
+            if not data_str:
+                continue
+            if data_str == "[DONE]":
+                return
+            try:
+                evt = json.loads(data_str)
+            except json.JSONDecodeError:
+                continue
+            if is_anthropic:
+                if evt.get("type") == "content_block_delta":
+                    delta = evt.get("delta") or {}
+                    if delta.get("type") == "text_delta" and delta.get("text"):
+                        yield delta["text"]
+                elif evt.get("type") == "message_stop":
+                    return
+            else:
+                choices = evt.get("choices") or []
+                if choices:
+                    content = (choices[0].get("delta") or {}).get("content")
+                    if content:
+                        yield content
+    except Exception as e:
+        status = getattr(getattr(e, "response", None), "status_code", None)
+        print(f"[LLM] stream call failed: {e}; status={status}; url={url}")
+        return
 
 
 def _mock_response(system_prompt: str, user_message: str) -> Optional[str]:

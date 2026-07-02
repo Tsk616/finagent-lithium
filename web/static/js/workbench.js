@@ -213,6 +213,7 @@ function appendWorkbenchBubble(reportId, role, text) {
   bubble.textContent = text;
   out.appendChild(bubble);
   out.scrollTop = out.scrollHeight;
+  return bubble;
 }
 
 function askFromWorkbench() {
@@ -237,36 +238,23 @@ function askFromWorkbench() {
   appendWorkbenchBubble(reportId, 'user', question);
   input.value = '';
 
-  var controller = new AbortController();
-  var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
-
-  fetch('/api/ask', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      report_id: reportId,
-      question: question,
-      conversation: workbenchConversations[reportId]
-    }),
-    signal: controller.signal
-  }).then(function(resp) {
-    clearTimeout(timeoutId);
-    if (!resp.ok) throw new Error('服务器错误 (' + resp.status + ')');
-    return resp.json();
-  }).then(function(data) {
-    var answer = data.answer || data.message || '未生成回答。';
-    workbenchConversations[reportId].push({role: 'assistant', content: answer});
-    appendWorkbenchBubble(reportId, 'assistant', answer);
-  }).catch(function(err) {
-    var msg;
-    if (err.name === 'AbortError') {
-      msg = '请求超时，请稍后重试。';
-    } else {
-      msg = '追问失败：' + err.message;
+  var bubble = appendWorkbenchBubble(reportId, 'assistant', '');
+  streamAsk({
+    report_id: reportId,
+    question: question,
+    conversation: workbenchConversations[reportId]
+  }, {
+    onDelta: function(delta) {
+      bubble.textContent += delta;
+      out.scrollTop = out.scrollHeight;
+    },
+    onDone: function(full) {
+      workbenchConversations[reportId].push({role: 'assistant', content: full});
+    },
+    onError: function(msg) {
+      bubble.textContent = msg;
+      workbenchConversations[reportId].pop();
     }
-    appendWorkbenchBubble(reportId, 'assistant', msg);
-    // Remove the unanswered user message from conversation
-    workbenchConversations[reportId].pop();
   });
 }
 
@@ -317,12 +305,13 @@ function toggleHistoryChat(reportId) {
 
 function appendHistoryChatBubble(reportId, role, text) {
   var container = document.getElementById('history-msgs-' + reportId);
-  if (!container) return;
+  if (!container) return null;
   var bubble = document.createElement('div');
   bubble.className = 'chat-bubble ' + role;
   bubble.textContent = text;
   container.appendChild(bubble);
   container.scrollTop = container.scrollHeight;
+  return bubble;
 }
 
 function sendHistoryChat(reportId) {
@@ -340,38 +329,27 @@ function sendHistoryChat(reportId) {
   input.value = '';
   input.disabled = true;
 
-  var controller = new AbortController();
-  var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
-
-  fetch('/api/ask', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      report_id: reportId,
-      question: question,
-      conversation: historyConversations[reportId]
-    }),
-    signal: controller.signal
-  }).then(function(resp) {
-    clearTimeout(timeoutId);
-    if (!resp.ok) throw new Error('服务器错误 (' + resp.status + ')');
-    return resp.json();
-  }).then(function(data) {
-    var answer = data.answer || data.message || '未生成回答。';
-    historyConversations[reportId].push({role: 'assistant', content: answer});
-    appendHistoryChatBubble(reportId, 'assistant', answer);
-    input.disabled = false;
-    input.focus();
-  }).catch(function(err) {
-    var msg;
-    if (err.name === 'AbortError') {
-      msg = '请求超时，请稍后重试。';
-    } else {
-      msg = '追问失败：' + err.message;
+  var bubble = appendHistoryChatBubble(reportId, 'assistant', '');
+  var container = document.getElementById('history-msgs-' + reportId);
+  streamAsk({
+    report_id: reportId,
+    question: question,
+    conversation: historyConversations[reportId]
+  }, {
+    onDelta: function(delta) {
+      if (bubble) bubble.textContent += delta;
+      if (container) container.scrollTop = container.scrollHeight;
+    },
+    onDone: function(full) {
+      historyConversations[reportId].push({role: 'assistant', content: full});
+      input.disabled = false;
+      input.focus();
+    },
+    onError: function(msg) {
+      if (bubble) bubble.textContent = msg;
+      historyConversations[reportId].pop();
+      input.disabled = false;
     }
-    appendHistoryChatBubble(reportId, 'assistant', msg);
-    historyConversations[reportId].pop();
-    input.disabled = false;
   });
 }
 

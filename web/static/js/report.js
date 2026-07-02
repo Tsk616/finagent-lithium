@@ -35,40 +35,36 @@ function askReport() {
   btn.disabled = true;
   btn.textContent = '思考中...';
 
-  var controller = new AbortController();
-  var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
+  // Streamed answer: create the assistant bubble up front, append deltas
+  var history = document.getElementById('askHistory');
+  var bubble = document.createElement('div');
+  bubble.className = 'chat-bubble chat-assistant';
+  history.appendChild(bubble);
 
-  fetch('/api/ask', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      report_id: reportId,
-      question: question,
-      conversation: askConversation
-    }),
-    signal: controller.signal
-  }).then(function(resp) {
-    clearTimeout(timeoutId);
-    if (!resp.ok) throw new Error('服务器错误 (' + resp.status + ')');
-    return resp.json();
-  }).then(function(data) {
-    var answer = data.answer || data.message || '未生成回答。';
-    appendChatBubble('assistant', answer);
-    askConversation.push({role: 'assistant', content: answer});
+  function finish() {
     btn.disabled = false;
     btn.textContent = '发送';
-  }).catch(function(err) {
-    var msg;
-    if (err.name === 'AbortError') {
-      msg = '请求超时，请稍后重试。';
-    } else {
-      msg = '追问失败：' + err.message;
+  }
+
+  streamAsk({
+    report_id: reportId,
+    question: question,
+    conversation: askConversation
+  }, {
+    onDelta: function(delta) {
+      bubble.textContent += delta;
+      history.scrollTop = history.scrollHeight;
+    },
+    onDone: function(full) {
+      askConversation.push({role: 'assistant', content: full});
+      finish();
+    },
+    onError: function(msg) {
+      bubble.textContent = msg;
+      // Remove the unanswered user message from conversation
+      askConversation.pop();
+      finish();
     }
-    appendChatBubble('assistant', msg);
-    // Remove the unanswered user message from conversation
-    askConversation.pop();
-    btn.disabled = false;
-    btn.textContent = '发送';
   });
 }
 
