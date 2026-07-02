@@ -18,7 +18,7 @@ from flask import Flask, jsonify
 from web.routes import register_blueprints
 from web.workflow import KB
 
-# Backward-compatible re-exports: external code (api/index.py, tests)
+# Backward-compatible re-exports: external code (tests)
 # imports _build_template_data and shared state from web.app
 from web.template_data import build_template_data as _build_template_data  # noqa: F401
 from web.shared_state import REPORT_HISTORY as _REPORT_HISTORY  # noqa: F401

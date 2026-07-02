@@ -55,12 +55,12 @@
 	{% endif %}
 
 <nav class="report-nav" aria-label="报告章节导航">
+  <a href="#ch5b-macro">宏观背景</a>
   <a href="#ch1-company">公司画像</a>
   <a href="#ch2-general">指标体检</a>
   {% if has_historical %}<a href="#ch-trend">趋势分析</a>{% endif %}
   <a href="#ch4-linkage">联动诊断</a>
   {% if risk_assessment %}<a href="#ch-risk">风险评估</a>{% endif %}
-  <a href="#ch5b-macro">宏观背景</a>
   <a href="#ch5c-peers">行业对标</a>
   {% if has_strategy %}<a href="#ch-strategy">战略洞察</a>{% endif %}
   {% if has_advanced %}
@@ -72,6 +72,91 @@
   <a href="#ch6-summary">总结</a>
   <a href="#ch7-ask">追问交互</a>
 </nav>
+
+  <!-- Macro context (always shown) -->
+  <section class="chapter" id="ch5b-macro">
+    <h2 class="chapter-title">🌍 宏观背景</h2>
+    {% if lithium_trend %}
+    <div class="company-card" style="margin-bottom:12px;">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;">
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">碳酸锂期货价格（最新）</div>
+          <div style="font-size:28px;font-weight:700;">
+            {{ "%.0f"|format(lithium_trend.current) }} <span style="font-size:14px;">{{ lithium_trend.unit }}</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">近3月变化</div>
+          <div style="font-size:20px;font-weight:600;">
+            {{ "%+.1f"|format(lithium_trend.change_3m_pct) }}%
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">趋势</div>
+          <div style="font-size:20px;font-weight:600;">{{ lithium_trend.trend }}</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">
+        3月均价 {{ "%.0f"|format(lithium_trend.avg_3m) }} | 6月均价 {{ "%.0f"|format(lithium_trend.avg_6m) }} {{ lithium_trend.unit }}
+      </div>
+    </div>
+    {% endif %}
+    {% if macro_insights and macro_insights.available %}
+    <div class="insight-panel">
+      <h3>宏观背景解读</h3>
+      <p>{{ macro_insights.summary }}</p>
+      {% if macro_insights.points %}
+      <ul>
+        {% for point in macro_insights.points %}
+        <li>{{ point }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if deepseek_macro_structured %}
+    <div class="macro-cards">
+      {% if deepseek_macro_structured.lithium_price_trend %}
+      <div class="macro-card">
+        <div class="macro-card-title">📈 碳酸锂价格走势</div>
+        <div class="macro-card-content">{{ deepseek_macro_structured.lithium_price_trend }}</div>
+      </div>
+      {% endif %}
+      {% if deepseek_macro_structured.supply_demand %}
+      <div class="macro-card">
+        <div class="macro-card-title">⚖️ 供需格局</div>
+        <div class="macro-card-content">{{ deepseek_macro_structured.supply_demand }}</div>
+      </div>
+      {% endif %}
+      {% if deepseek_macro_structured.policy_environment %}
+      <div class="macro-card">
+        <div class="macro-card-title">📋 政策环境</div>
+        <div class="macro-card-content">{{ deepseek_macro_structured.policy_environment }}</div>
+      </div>
+      {% endif %}
+      {% if deepseek_macro_structured.industry_growth %}
+      <div class="macro-card">
+        <div class="macro-card-title">📊 行业增速</div>
+        <div class="macro-card-content">{{ deepseek_macro_structured.industry_growth }}</div>
+      </div>
+      {% endif %}
+      {% if deepseek_macro_structured.impact_on_company %}
+      <div class="macro-card">
+        <div class="macro-card-title">🏭 对本公司影响</div>
+        <div class="macro-card-content">{{ deepseek_macro_structured.impact_on_company }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% elif deepseek_macro %}
+    <div class="insight-panel">
+      <h3>行业宏观分析（AI 生成）</h3>
+      <div class="ds-macro-content">{{ deepseek_macro }}</div>
+    </div>
+    {% endif %}
+    {% if not lithium_trend and not (macro_insights and macro_insights.available) and not deepseek_macro and not deepseek_macro_structured %}
+    <div class="empty-state">宏观数据加载中或暂不可用。系统将在可用时自动接入锂价行情和行业趋势数据。</div>
+    {% endif %}
+  </section>
 
 <!-- ── Chapter 1: Company portrait ── -->
 <section class="chapter" id="ch1-company">
@@ -294,90 +379,6 @@
 <!-- ── Risk assessment (Phase 2, replaces anomaly alerts) ── -->
 {% include 'partials/_risk_assessment.html' %}
 
-  <!-- Macro context (always shown) -->
-  <section class="chapter" id="ch5b-macro">
-    <h2 class="chapter-title">🌍 宏观背景</h2>
-    {% if lithium_trend %}
-    <div class="company-card" style="margin-bottom:12px;">
-      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center;">
-        <div>
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">碳酸锂期货价格（最新）</div>
-          <div style="font-size:28px;font-weight:700;">
-            {{ "%.0f"|format(lithium_trend.current) }} <span style="font-size:14px;">{{ lithium_trend.unit }}</span>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">近3月变化</div>
-          <div style="font-size:20px;font-weight:600;">
-            {{ "%+.1f"|format(lithium_trend.change_3m_pct) }}%
-          </div>
-        </div>
-        <div>
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">趋势</div>
-          <div style="font-size:20px;font-weight:600;">{{ lithium_trend.trend }}</div>
-        </div>
-      </div>
-      <div style="margin-top:8px;font-size:12px;color:var(--text-muted);">
-        3月均价 {{ "%.0f"|format(lithium_trend.avg_3m) }} | 6月均价 {{ "%.0f"|format(lithium_trend.avg_6m) }} {{ lithium_trend.unit }}
-      </div>
-    </div>
-    {% endif %}
-    {% if macro_insights and macro_insights.available %}
-    <div class="insight-panel">
-      <h3>宏观背景解读</h3>
-      <p>{{ macro_insights.summary }}</p>
-      {% if macro_insights.points %}
-      <ul>
-        {% for point in macro_insights.points %}
-        <li>{{ point }}</li>
-        {% endfor %}
-      </ul>
-      {% endif %}
-    </div>
-    {% endif %}
-    {% if deepseek_macro_structured %}
-    <div class="macro-cards">
-      {% if deepseek_macro_structured.lithium_price_trend %}
-      <div class="macro-card">
-        <div class="macro-card-title">📈 碳酸锂价格走势</div>
-        <div class="macro-card-content">{{ deepseek_macro_structured.lithium_price_trend }}</div>
-      </div>
-      {% endif %}
-      {% if deepseek_macro_structured.supply_demand %}
-      <div class="macro-card">
-        <div class="macro-card-title">⚖️ 供需格局</div>
-        <div class="macro-card-content">{{ deepseek_macro_structured.supply_demand }}</div>
-      </div>
-      {% endif %}
-      {% if deepseek_macro_structured.policy_environment %}
-      <div class="macro-card">
-        <div class="macro-card-title">📋 政策环境</div>
-        <div class="macro-card-content">{{ deepseek_macro_structured.policy_environment }}</div>
-      </div>
-      {% endif %}
-      {% if deepseek_macro_structured.industry_growth %}
-      <div class="macro-card">
-        <div class="macro-card-title">📊 行业增速</div>
-        <div class="macro-card-content">{{ deepseek_macro_structured.industry_growth }}</div>
-      </div>
-      {% endif %}
-      {% if deepseek_macro_structured.impact_on_company %}
-      <div class="macro-card">
-        <div class="macro-card-title">🏭 对本公司影响</div>
-        <div class="macro-card-content">{{ deepseek_macro_structured.impact_on_company }}</div>
-      </div>
-      {% endif %}
-    </div>
-    {% elif deepseek_macro %}
-    <div class="insight-panel">
-      <h3>行业宏观分析（AI 生成）</h3>
-      <div class="ds-macro-content">{{ deepseek_macro }}</div>
-    </div>
-    {% endif %}
-    {% if not lithium_trend and not (macro_insights and macro_insights.available) and not deepseek_macro and not deepseek_macro_structured %}
-    <div class="empty-state">宏观数据加载中或暂不可用。系统将在可用时自动接入锂价行情和行业趋势数据。</div>
-    {% endif %}
-  </section>
 
   <!-- Peer comparison (always shown) -->
   <section class="chapter" id="ch5c-peers">
@@ -397,6 +398,8 @@
     {% endif %}
     {% if has_peers and peer_comparison %}
     <p style="color:var(--text-muted);font-size:13px;margin-bottom:12px;">锂电概念股核心财务指标横向对比（Wind 数据）</p>
+    {% set show_gm = peer_comparison | selectattr('gross_margin', 'defined') | list %}
+    {% set show_roe = peer_comparison | selectattr('roe', 'defined') | list %}
     <div class="peer-table-wrap">
       <table class="peer-compare-table">
         <thead>
@@ -406,8 +409,8 @@
             <th>净利润</th>
             <th>总资产</th>
             <th>净资产</th>
-            {% if peer_comparison[0].gross_margin is defined %}<th>毛利率</th>{% endif %}
-            {% if peer_comparison[0].roe is defined %}<th>ROE</th>{% endif %}
+            {% if show_gm %}<th>毛利率</th>{% endif %}
+            {% if show_roe %}<th>ROE</th>{% endif %}
           </tr>
         </thead>
         <tbody>
@@ -416,12 +419,12 @@
             <td class="peer-td-name">
               {{ p.name }} <span class="peer-code">{{ p.windcode }}</span>{% if p.is_current %} <span class="peer-marker">◀ 当前</span>{% endif %}
             </td>
-            <td class="num-cell">{{ p.revenue }}</td>
-            <td class="num-cell">{{ p.profit }}</td>
-            <td class="num-cell">{{ p.assets }}</td>
-            <td class="num-cell">{{ p.equity }}</td>
-            {% if p.gross_margin is defined %}<td class="num-cell">{{ p.gross_margin }}</td>{% endif %}
-            {% if p.roe is defined %}<td class="num-cell">{{ p.roe }}</td>{% endif %}
+            <td class="num-cell">{{ p.revenue | default('-') }}</td>
+            <td class="num-cell">{{ p.profit | default('-') }}</td>
+            <td class="num-cell">{{ p.assets | default('-') }}</td>
+            <td class="num-cell">{{ p.equity | default('-') }}</td>
+            {% if show_gm %}<td class="num-cell">{{ p.gross_margin | default('-') }}</td>{% endif %}
+            {% if show_roe %}<td class="num-cell">{{ p.roe | default('-') }}</td>{% endif %}
           </tr>
           {% endfor %}
         </tbody>

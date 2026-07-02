@@ -150,8 +150,10 @@ function switchSubSector(idx) {
         });
       }
       var layout = Object.assign({}, darkLayout, {
-        yaxis: Object.assign({}, darkLayout.yaxis, { title: '营业收入(亿元)' }),
-        yaxis2: { title: '净利润(亿元)', overlaying: 'y', side: 'right', gridcolor: 'rgba(255,255,255,0.03)', font: { color: '#f5a623' } },
+        margin: { t: 50, r: 20, b: 40, l: 60 },
+        legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: 1.12, yanchor: 'bottom' },
+        yaxis: Object.assign({}, darkLayout.yaxis, { title: '营业收入(亿元)', automargin: true }),
+        yaxis2: { title: '净利润(亿元)', overlaying: 'y', side: 'right', gridcolor: 'rgba(255,255,255,0.03)', font: { color: '#f5a623' }, automargin: true },
       });
       Plotly.newPlot('chart-revenue-profit', traces, layout, plotConfig);
     }
@@ -244,9 +246,10 @@ function switchSubSector(idx) {
             marker: { color: C.red, size: 10 }, text: ['盈亏平衡'], textposition: 'top center', textfont: { color: C.red } });
         }
         Plotly.newPlot('chart-cvp', traces, Object.assign({}, base, {
-          xaxis: Object.assign({}, base.xaxis, { title: '营业收入(亿元)' }),
-          yaxis: Object.assign({}, base.yaxis, { title: '金额(亿元)' }),
-          legend: { orientation: 'h', y: -0.2, x: 0.5, xanchor: 'center' },
+          margin: { t: 50, r: 20, b: 50, l: 50 },
+          xaxis: Object.assign({}, base.xaxis, { title: '营业收入(亿元)', automargin: true }),
+          yaxis: Object.assign({}, base.yaxis, { title: '金额(亿元)', automargin: true }),
+          legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: 1.08, yanchor: 'bottom' },
         }), cfg);
       }
     } catch (e) {}

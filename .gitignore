@@ -41,3 +41,9 @@ prompts/
 
 # Test report
 _test_report_ningde.md
+_verify_output.txt
+
+# Local tunnel / SSH artifacts (never commit)
+start_tunnel.bat
+tunnel.log
+ssh_public_key.txt

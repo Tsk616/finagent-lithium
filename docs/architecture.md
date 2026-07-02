@@ -91,7 +91,7 @@ web/
 - **Blueprint 拆分**：每个 Blueprint 对应一个功能域（分析、追问、历史、同业），路由文件保持精简可测。
 - **template_data.py 分离**：所有 `AnalysisState -> template data` 的转换逻辑集中在此，路由层只负责 HTTP 协议。
 - **shared_state.py 共享**：`REPORT_HISTORY`（deque, maxlen=20）和 `REPORT_STATES`（dict）由多个 Blueprint 读写，因此提取为独立模块。
-- **后向兼容**：`web/app.py` 保留 `_build_template_data`、`_REPORT_HISTORY`、`_REPORT_STATES` 的 re-export，避免外部代码（如 `api/index.py`、测试）因重构而崩溃。
+- **后向兼容**：`web/app.py` 保留 `_build_template_data`、`_REPORT_HISTORY`、`_REPORT_STATES` 的 re-export，避免外部代码（如测试）因重构而崩溃。
 
 ## 5. 数据流
 

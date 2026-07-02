@@ -2005,3 +2005,15 @@ input:focus, textarea:focus { outline: none; border-color: var(--blue-link); }
   .zcontrib-row { grid-template-columns: 100px 1fr 46px; }
   .cost-row { grid-template-columns: 60px 1fr 48px 54px; }
 }
+
+/* ── 情景解读（预测章节）卡片与列表布局 ── */
+.pred-narr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 12px 0; }
+.pred-narr { padding: 12px 14px; border-radius: 8px; background: rgba(125,140,170,0.06); border-left: 3px solid var(--border); }
+.pred-narr b { display: block; margin-bottom: 6px; font-size: 14px; color: var(--text-heading, #e6eaf2); }
+.pred-narr p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
+.pred-narr-base { border-left-color: #1d6fd6; }
+.pred-narr-opt  { border-left-color: #f5a623; }
+.pred-narr-pess { border-left-color: #f56c6c; }
+.pred-lists { margin-top: 12px; font-size: 13px; }
+.pred-lists > b { color: var(--text-heading, #e6eaf2); }
+.pred-lists ul { margin: 6px 0 0 18px; color: var(--text-secondary); line-height: 1.7; }

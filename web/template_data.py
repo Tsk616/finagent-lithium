@@ -59,8 +59,12 @@ def format_peer_data(peers: list) -> list:
             "is_current": p.get("is_current", False),
         }
         # Format large numbers for display
+        # 上游可能用 net_profit/total_assets 命名（对齐 metric_config 的兜底），做键名回退
+        alias = {"profit": "net_profit", "assets": "total_assets"}
         for key in ("revenue", "profit", "assets", "equity"):
             val = p.get(key)
+            if val is None and key in alias:
+                val = p.get(alias[key])
             if val is not None:
                 if abs(val) >= 1e12:
                     item[key] = f"{val/1e12:.2f}万亿"
@@ -74,11 +78,10 @@ def format_peer_data(peers: list) -> list:
         rev = p.get("revenue")
         cost = p.get("cost")
         eq = p.get("equity")
-        pft = p.get("profit")
+        pft = p.get("profit") if p.get("profit") is not None else p.get("net_profit")
+        # 仅在可计算时写 gross_margin；缺失则不设该键，模板据此隐藏整列
         if rev and cost and rev != 0:
             item["gross_margin"] = f"{(rev - cost) / rev * 100:.1f}%"
-        else:
-            item["gross_margin"] = "-"
         if pft and eq and eq != 0:
             item["roe"] = f"{pft / eq * 100:.1f}%"
         else:
