@@ -8,6 +8,7 @@ Returns a complete AnalysisState dict ready for frontend rendering.
 import json
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Dict, Optional, List, Any
 
@@ -75,6 +76,230 @@ def _peer_windcodes_for_context(stock_code: str = "") -> List[str]:
         current = ""
     peers = [code for code in codes if code != current]
     return peers
+
+
+# ── Parallelizable fetch/LLM tasks ────────────────────────────────────
+# Each task writes ONLY its own state keys (per-key dict assignment is atomic
+# under the GIL), so they can run concurrently in a ThreadPoolExecutor.
+# Error convention: failures are recorded as state["_xxx_error"] strings.
+
+
+def _task_fetch_historical(state: Dict[str, Any], stock_code: str, current_period: str) -> None:
+    """Fetch multi-year historical financials for trend charts/prediction."""
+    state["historical_data"] = {}
+    hist_years = int(os.environ.get("HISTORICAL_YEARS", "5"))
+    if not (stock_code and current_period and hist_years > 0):
+        return
+    try:
+        from nodes.historical_data import fetch_historical_periods
+        from nodes.wind_adapter import stock_code_to_windcode
+        windcode = stock_code_to_windcode(stock_code)
+        historical = fetch_historical_periods(windcode, current_period, years=hist_years)
+        if historical and historical.get("periods"):
+            state["historical_data"] = historical
+    except Exception as exc:
+        state["_historical_error"] = str(exc)
+
+
+def _task_fetch_market(state: Dict[str, Any], stock_code: str) -> None:
+    """Fetch price/market-cap/shares for valuation models."""
+    state["market_data"] = {}
+    if not stock_code:
+        return
+    try:
+        from nodes.wind_adapter import fetch_market_data, stock_code_to_windcode
+        windcode = stock_code_to_windcode(stock_code)
+        mkt_timeout = int(os.environ.get("WIND_CONTEXT_TIMEOUT_SECONDS", "6"))
+        market = fetch_market_data(windcode, timeout=mkt_timeout)
+        if market:
+            state["market_data"] = market
+    except Exception as exc:
+        state["_market_data_error"] = str(exc)
+
+
+def _task_macro_and_peers(
+    state: Dict[str, Any],
+    stock_code: str,
+    company_name: str,
+    current_period: str,
+    financial_data: Dict[str, Any],
+) -> None:
+    """Macro chain: Wind lithium trend + peer financials, then the DeepSeek
+    macro fallback when no live trend arrived. Sequential inside this branch."""
+    try:
+        from nodes.wind_adapter import (
+            get_lithium_price_trend, fetch_peers_financials, get_wind_status, stock_code_to_windcode,
+        )
+        state["wind_status"] = get_wind_status()
+        if _context_fetch_enabled(state, financial_data):
+            # Lithium price trend for anomaly external rules
+            context_timeout = int(os.environ.get("WIND_CONTEXT_TIMEOUT_SECONDS", "6"))
+            lithium_trend = get_lithium_price_trend(timeout=context_timeout)
+            if lithium_trend:
+                state["_lithium_trend"] = lithium_trend
+                state["macro_context"] = {"lithium_trend": lithium_trend}
+
+            # Peer financials for cross-section comparison
+            peer_limit = int(os.environ.get("WIND_PEER_MAX", "2"))
+            peer_codes = _peer_windcodes_for_context(stock_code)
+            peers = fetch_peers_financials(
+                windcodes=peer_codes,
+                max_peers=peer_limit,
+                timeout=context_timeout,
+            )
+            if peers:
+                # Tag the current company
+                current_wc = stock_code_to_windcode(stock_code) if stock_code else ""
+                for p in peers:
+                    p["is_current"] = (p["windcode"] == current_wc)
+                state["_peer_comparison"] = peers
+    except Exception as exc:
+        state["_macro_fetch_error"] = str(exc)
+
+    state.setdefault("macro_context", {})
+
+    # DeepSeek macro context fallback when Wind data is unavailable
+    if not state.get("_lithium_trend") and not state.get("macro_context", {}).get("lithium_trend"):
+        try:
+            from nodes.llm_client import call_llm
+            sector_name = state.get("sector_level2") or "锂电池"
+            macro_prompt = (
+                "你是一位锂电行业宏观分析师。请基于以下公司背景，分析该公司所处行业的宏观环境。\n\n"
+                "## 要求\n"
+                "用 JSON 格式输出，字段如下：\n"
+                "{\n"
+                '  "lithium_price_trend": "碳酸锂价格近期走势描述（含具体价格区间和涨跌幅）",\n'
+                '  "supply_demand": "锂电池上下游供需格局变化",\n'
+                '  "policy_environment": "影响行业的国内外政策（补贴、产能管控、出口关税等）",\n'
+                '  "industry_growth": "行业整体增速和产能利用率趋势",\n'
+                '  "impact_on_company": "以上宏观因素对该公司细分赛道的具体影响",\n'
+                '  "summary": "一段100-150字的综合宏观分析摘要"\n'
+                "}\n\n"
+                "## 约束\n"
+                "1. 只陈述可验证的事实和趋势，不做投资建议\n"
+                "2. 引用具体数字时标明来源年份/季度\n"
+                "3. 如果某个字段信息不足，写'暂无可靠数据'而非编造\n"
+                "4. 只输出 JSON，不要加 markdown 代码块"
+            )
+            macro_response = call_llm(
+                macro_prompt,
+                f"公司：{company_name}，细分赛道：{sector_name}，报告期：{current_period}",
+                config={"timeout": 20},
+            )
+            if macro_response and len(macro_response.strip()) > 30:
+                cleaned = macro_response.strip()
+                if cleaned.startswith("```"):
+                    cleaned = cleaned.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                try:
+                    macro_data = json.loads(cleaned)
+                    state["_deepseek_macro_structured"] = macro_data
+                    state["_deepseek_macro"] = macro_data.get("summary", cleaned)
+                    state["macro_context"].update({
+                        k: v for k, v in macro_data.items()
+                        if k != "summary" and v and v != "暂无可靠数据"
+                    })
+                except (ValueError, KeyError):
+                    state["_deepseek_macro"] = cleaned
+        except Exception as exc:
+            state["_macro_llm_error"] = str(exc)
+
+
+def _task_linkage(state: Dict[str, Any], llm_config: Optional[Dict[str, Any]]) -> None:
+    """Node 6: LLM linkage diagnosis. Exceptions propagate (pipeline-fatal,
+    same as the previous serial behavior)."""
+    linkage = linkage_analysis(
+        sector_level2=state.get("sector_level2"),
+        sub_sectors=state.get("sub_sectors"),
+        key_indicators_for_linkage=state["key_indicators_for_linkage"],
+        general_indicators=state["general_indicators"],
+        sector_indicators=state["sector_indicators"],
+        sector_characteristics=state.get("sector_characteristics"),
+        analysis_focus=state.get("analysis_focus"), kb=KB,
+        llm_config=llm_config)
+    state["linkage_diagnosis"] = linkage["linkage_diagnosis"]
+
+
+def _task_prediction(state: Dict[str, Any], llm_config: Optional[Dict[str, Any]]) -> None:
+    """Six-dimension trend prediction (needs historical_data + lithium trend)."""
+    try:
+        from nodes.prediction_model import run_prediction_analysis
+        state["prediction_analysis"] = run_prediction_analysis(state, llm_config)
+    except Exception as exc:
+        state["prediction_analysis"] = {"available": False}
+        state["_prediction_error"] = str(exc)
+
+
+def _task_advanced(state: Dict[str, Any], llm_config: Optional[Dict[str, Any]]) -> None:
+    """Advanced models (needs linkage_diagnosis -- submit after linkage)."""
+    try:
+        from nodes.advanced_models import run_advanced_analysis
+        state["advanced_analysis"] = run_advanced_analysis(state, llm_config)
+    except Exception as exc:
+        state["advanced_analysis"] = {}
+        state["_advanced_error"] = str(exc)
+
+
+def _task_report_and_strategy(
+    state: Dict[str, Any],
+    company_name: str,
+    stock_code: str,
+    current_period: str,
+    llm_config: Optional[Dict[str, Any]],
+) -> None:
+    """Node 8 (LLM report) then AI strategy insights extracted from it."""
+    report = generate_report(
+        company_name=company_name, stock_code=stock_code,
+        current_period=current_period,
+        sector_level1=state.get("sector_level1"),
+        sector_level2=state.get("sector_level2"),
+        sector_characteristics=state.get("sector_characteristics"),
+        analysis_focus=state.get("analysis_focus"),
+        sub_sectors=state.get("sub_sectors"),
+        general_indicators=state["general_indicators"],
+        sector_indicators=state["sector_indicators"],
+        key_indicators_for_linkage=state["key_indicators_for_linkage"],
+        linkage_diagnosis=state["linkage_diagnosis"],
+        anomaly_signals=state["anomaly_signals"],
+        error_log=state.get("error_log", []),
+        data_completeness=state.get("data_completeness"),
+        skipped_external_rules=state.get("skipped_external_rules", 0),
+        weighted_score=state.get("weighted_score"),
+        metric_interpretations=state.get("metric_interpretations"),
+        macro_insights=state.get("macro_insights"),
+        industry_benchmark_insights=state.get("industry_benchmark_insights"),
+        risk_summary=state.get("risk_summary"),
+        llm_config=llm_config)
+    state["report_markdown"] = report["report_markdown"]
+
+    # ── AI strategy insights (optional, post-report) ──
+    state["strategy_insights"] = {}
+    if llm_config and llm_config.get("api_key", ""):
+        try:
+            from nodes.llm_client import call_llm
+            strategy_prompt = (
+                "你是资深行业分析师。基于以下财报分析报告，提取公司的战略方向和展望。\n\n"
+                "## 要求\n"
+                "返回 JSON，格式如下：\n"
+                "{\n"
+                '  "strategy_summary": "一段50-100字的战略方向总结",\n'
+                '  "key_strategies": ["战略要点1", "战略要点2", "战略要点3"],\n'
+                '  "outlook": "未来1-2年展望（50-80字）",\n'
+                '  "risks": ["关键风险1", "关键风险2"]\n'
+                "}\n\n"
+                "## 约束\n"
+                "1. 只基于报告内容提取，不编造未提及的信息\n"
+                "2. 战略要点最多5条，风险最多3条\n"
+                "3. 只输出 JSON，不加 markdown 代码块\n"
+            )
+            report_excerpt = state["report_markdown"][:3000]
+            resp = call_llm(strategy_prompt, report_excerpt, config={"timeout": 20})
+            if resp and len(resp.strip()) > 20:
+                cleaned = resp.strip()
+                if cleaned.startswith("```"):
+                    cleaned = cleaned.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+                state["strategy_insights"] = json.loads(cleaned)
+        except Exception as exc:
+            state["_strategy_error"] = str(exc)
 
 
 def run_pipeline(
@@ -284,116 +509,26 @@ def run_pipeline(
         )
     )
 
-    # ── Historical data fetch (optional, for trend charts) ──
-    state["historical_data"] = {}
-    hist_years = int(os.environ.get("HISTORICAL_YEARS", "5"))
-    if stock_code and current_period and hist_years > 0:
-        try:
-            from nodes.historical_data import fetch_historical_periods
-            from nodes.wind_adapter import stock_code_to_windcode
-            windcode = stock_code_to_windcode(stock_code)
-            historical = fetch_historical_periods(windcode, current_period, years=hist_years)
-            if historical and historical.get("periods"):
-                state["historical_data"] = historical
-        except Exception as exc:
-            state["_historical_error"] = str(exc)
+    # ── Phase A: independent external fetches in parallel ──
+    # historical / market / (macro chain) touch disjoint state keys; Wind
+    # subprocess fan-out is capped inside wind_adapter (_WIND_SUBPROC_SEM).
+    with ThreadPoolExecutor(max_workers=3) as _ex:
+        _phase_a = [
+            _ex.submit(_task_fetch_historical, state, stock_code, current_period),
+            _ex.submit(_task_fetch_market, state, stock_code),
+            _ex.submit(_task_macro_and_peers, state, stock_code, company_name,
+                       current_period, financial_data),
+        ]
+        for _f in _phase_a:
+            _f.result()
 
-    # ── Market data fetch (price / market cap / shares, for valuation models) ──
-    state["market_data"] = {}
-    if stock_code:
-        try:
-            from nodes.wind_adapter import fetch_market_data, stock_code_to_windcode
-            windcode = stock_code_to_windcode(stock_code)
-            mkt_timeout = int(os.environ.get("WIND_CONTEXT_TIMEOUT_SECONDS", "6"))
-            market = fetch_market_data(windcode, timeout=mkt_timeout)
-            if market:
-                state["market_data"] = market
-        except Exception as exc:
-            state["_market_data_error"] = str(exc)
-
-    # ── Wind: Macro + Peer context (optional) ──
+    # Snapshot wind_status after the barrier so it reflects finished calls,
+    # not mid-flight ones.
     try:
-        from nodes.wind_adapter import (
-            get_lithium_price_trend, fetch_peers_financials, get_wind_status, stock_code_to_windcode,
-        )
+        from nodes.wind_adapter import get_wind_status
         state["wind_status"] = get_wind_status()
-        if _context_fetch_enabled(state, financial_data):
-            # Lithium price trend for anomaly external rules
-            context_timeout = int(os.environ.get("WIND_CONTEXT_TIMEOUT_SECONDS", "6"))
-            lithium_trend = get_lithium_price_trend(timeout=context_timeout)
-            if lithium_trend:
-                state["_lithium_trend"] = lithium_trend
-                state["macro_context"] = {"lithium_trend": lithium_trend}
-
-            # Peer financials for cross-section comparison
-            peer_limit = int(os.environ.get("WIND_PEER_MAX", "2"))
-            peer_codes = _peer_windcodes_for_context(stock_code)
-            peers = fetch_peers_financials(
-                windcodes=peer_codes,
-                max_peers=peer_limit,
-                timeout=context_timeout,
-            )
-            if peers:
-                # Tag the current company
-                current_wc = stock_code_to_windcode(stock_code) if stock_code else ""
-                for p in peers:
-                    p["is_current"] = (p["windcode"] == current_wc)
-                state["_peer_comparison"] = peers
     except Exception:
-        pass
-
-    state.setdefault("macro_context", {})
-    if "wind_status" not in state:
-        try:
-            from nodes.wind_adapter import get_wind_status
-            state["wind_status"] = get_wind_status()
-        except Exception:
-            state["wind_status"] = {"live_calls_enabled": False, "last_error": "Wind adapter unavailable"}
-
-    # DeepSeek macro context fallback when Wind data is unavailable
-    if not state.get("_lithium_trend") and not state.get("macro_context", {}).get("lithium_trend"):
-        try:
-            from nodes.llm_client import call_llm
-            sector_name = state.get("sector_level2") or "锂电池"
-            macro_prompt = (
-                "你是一位锂电行业宏观分析师。请基于以下公司背景，分析该公司所处行业的宏观环境。\n\n"
-                "## 要求\n"
-                "用 JSON 格式输出，字段如下：\n"
-                "{\n"
-                '  "lithium_price_trend": "碳酸锂价格近期走势描述（含具体价格区间和涨跌幅）",\n'
-                '  "supply_demand": "锂电池上下游供需格局变化",\n'
-                '  "policy_environment": "影响行业的国内外政策（补贴、产能管控、出口关税等）",\n'
-                '  "industry_growth": "行业整体增速和产能利用率趋势",\n'
-                '  "impact_on_company": "以上宏观因素对该公司细分赛道的具体影响",\n'
-                '  "summary": "一段100-150字的综合宏观分析摘要"\n'
-                "}\n\n"
-                "## 约束\n"
-                "1. 只陈述可验证的事实和趋势，不做投资建议\n"
-                "2. 引用具体数字时标明来源年份/季度\n"
-                "3. 如果某个字段信息不足，写'暂无可靠数据'而非编造\n"
-                "4. 只输出 JSON，不要加 markdown 代码块"
-            )
-            macro_response = call_llm(
-                macro_prompt,
-                f"公司：{company_name}，细分赛道：{sector_name}，报告期：{current_period}",
-                config={"timeout": 20},
-            )
-            if macro_response and len(macro_response.strip()) > 30:
-                cleaned = macro_response.strip()
-                if cleaned.startswith("```"):
-                    cleaned = cleaned.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-                try:
-                    macro_data = json.loads(cleaned)
-                    state["_deepseek_macro_structured"] = macro_data
-                    state["_deepseek_macro"] = macro_data.get("summary", cleaned)
-                    state["macro_context"].update({
-                        k: v for k, v in macro_data.items()
-                        if k != "summary" and v and v != "暂无可靠数据"
-                    })
-                except (ValueError, KeyError):
-                    state["_deepseek_macro"] = cleaned
-        except Exception:
-            pass
+        state["wind_status"] = {"live_calls_enabled": False, "last_error": "Wind adapter unavailable"}
 
     state["industry_comparison"] = build_industry_comparison(
         flatten_indicator_results(
@@ -411,20 +546,8 @@ def run_pipeline(
         sub_sectors=state.get("sub_sectors"), kb=KB)
     state["key_indicators_for_linkage"] = key_inds["key_indicators_for_linkage"]
 
-    # Node 6: linkage_analysis
-    _emit(4, "异常扫描与行业对标")
-    linkage = linkage_analysis(
-        sector_level2=state.get("sector_level2"),
-        sub_sectors=state.get("sub_sectors"),
-        key_indicators_for_linkage=state["key_indicators_for_linkage"],
-        general_indicators=state["general_indicators"],
-        sector_indicators=state["sector_indicators"],
-        sector_characteristics=state.get("sector_characteristics"),
-        analysis_focus=state.get("analysis_focus"), kb=KB,
-        llm_config=effective_llm_config)
-    state["linkage_diagnosis"] = linkage["linkage_diagnosis"]
-
-    # Node 7: anomaly_scan (with macro context for external rules)
+    # Node 7: anomaly_scan (deterministic, no LLM -- runs before the LLM phase;
+    # it does not depend on linkage)
     anomaly = anomaly_scan(
         general_indicators=state["general_indicators"],
         sector_indicators=state["sector_indicators"],
@@ -446,77 +569,21 @@ def run_pipeline(
     )
     state.update(interpretations)
 
-    # Node 8: generate_report
-    _emit(5, "生成评分与报告")
-    report = generate_report(
-        company_name=company_name, stock_code=stock_code,
-        current_period=current_period,
-        sector_level1=state.get("sector_level1"),
-        sector_level2=state.get("sector_level2"),
-        sector_characteristics=state.get("sector_characteristics"),
-        analysis_focus=state.get("analysis_focus"),
-        sub_sectors=state.get("sub_sectors"),
-        general_indicators=state["general_indicators"],
-        sector_indicators=state["sector_indicators"],
-        key_indicators_for_linkage=state["key_indicators_for_linkage"],
-        linkage_diagnosis=state["linkage_diagnosis"],
-        anomaly_signals=state["anomaly_signals"],
-        error_log=state.get("error_log", []),
-        data_completeness=state.get("data_completeness"),
-        skipped_external_rules=state.get("skipped_external_rules", 0),
-        weighted_score=state.get("weighted_score"),
-        metric_interpretations=state.get("metric_interpretations"),
-        macro_insights=state.get("macro_insights"),
-        industry_benchmark_insights=state.get("industry_benchmark_insights"),
-        risk_summary=state.get("risk_summary"),
-        llm_config=effective_llm_config)
-    state["report_markdown"] = report["report_markdown"]
-
-    # ── AI strategy insights (optional, post-report) ──
-    state["strategy_insights"] = {}
-    if effective_llm_config and effective_llm_config.get("api_key", ""):
-        try:
-            from nodes.llm_client import call_llm
-            strategy_prompt = (
-                "你是资深行业分析师。基于以下财报分析报告，提取公司的战略方向和展望。\n\n"
-                "## 要求\n"
-                "返回 JSON，格式如下：\n"
-                "{\n"
-                '  "strategy_summary": "一段50-100字的战略方向总结",\n'
-                '  "key_strategies": ["战略要点1", "战略要点2", "战略要点3"],\n'
-                '  "outlook": "未来1-2年展望（50-80字）",\n'
-                '  "risks": ["关键风险1", "关键风险2"]\n'
-                "}\n\n"
-                "## 约束\n"
-                "1. 只基于报告内容提取，不编造未提及的信息\n"
-                "2. 战略要点最多5条，风险最多3条\n"
-                "3. 只输出 JSON，不加 markdown 代码块\n"
-            )
-            report_excerpt = state["report_markdown"][:3000]
-            resp = call_llm(strategy_prompt, report_excerpt, config={"timeout": 20})
-            if resp and len(resp.strip()) > 20:
-                cleaned = resp.strip()
-                if cleaned.startswith("```"):
-                    cleaned = cleaned.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-                state["strategy_insights"] = json.loads(cleaned)
-        except Exception:
-            pass
-
-    # ── Advanced analysis models (杜邦/CVP/现金流/Z-score/DCF/相对估值/哈佛/EVA) ──
-    try:
-        from nodes.advanced_models import run_advanced_analysis
-        state["advanced_analysis"] = run_advanced_analysis(state, effective_llm_config)
-    except Exception as exc:
-        state["advanced_analysis"] = {}
-        state["_advanced_error"] = str(exc)
-
-    # ── Six-dimension trend prediction (optional, needs historical series) ──
-    try:
-        from nodes.prediction_model import run_prediction_analysis
-        state["prediction_analysis"] = run_prediction_analysis(state, effective_llm_config)
-    except Exception as exc:
-        state["prediction_analysis"] = {"available": False}
-        state["_prediction_error"] = str(exc)
+    # ── Phase B: LLM stage in parallel ──
+    # linkage ∥ prediction first; once linkage lands, advanced models (which
+    # read linkage_diagnosis) ∥ report+strategy chain. Exceptions from linkage
+    # or the report chain propagate (pipeline-fatal, as in the serial version).
+    _emit(4, "AI 联动诊断与预测")
+    with ThreadPoolExecutor(max_workers=3) as _ex:
+        _f_pred = _ex.submit(_task_prediction, state, effective_llm_config)
+        _f_link = _ex.submit(_task_linkage, state, effective_llm_config)
+        _f_link.result()
+        _emit(5, "生成评分与报告")
+        _f_adv = _ex.submit(_task_advanced, state, effective_llm_config)
+        _f_rep = _ex.submit(_task_report_and_strategy, state, company_name,
+                            stock_code, current_period, effective_llm_config)
+        for _f in (_f_pred, _f_adv, _f_rep):
+            _f.result()
 
     state["status"] = "completed"
     return state

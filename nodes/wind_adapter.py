@@ -21,6 +21,7 @@ import os
 import re
 import hashlib
 import subprocess
+import threading
 import time
 from datetime import date
 from pathlib import Path
@@ -346,6 +347,17 @@ def _wind_call_cost() -> int:
         return 1
 
 
+# Budget check + usage record are read-modify-write on a shared JSON file;
+# parallel pipeline fetches must serialize them or calls slip past the limit.
+_USAGE_LOCK = threading.Lock()
+
+# Cap concurrent `node` subprocesses regardless of fetch fan-out: each one
+# costs ~30-60MB RSS, unaffordable on a 512MB worker if jobs overlap.
+_WIND_SUBPROC_SEM = threading.BoundedSemaphore(
+    max(int(os.environ.get("WIND_MAX_PARALLEL", "3")), 1)
+)
+
+
 def _wind_budget_allows_call() -> bool:
     usage = _read_wind_usage()
     limit = _wind_daily_limit()
@@ -445,28 +457,31 @@ def _call_wind_cli(
         logger.warning("Wind MCP skill directory not found; using fallback data source")
         return None
 
-    if not _wind_budget_allows_call():
-        _WIND_STATUS["last_error"] = "Wind daily point limit reached"
-        logger.warning("Wind daily point limit reached; using fallback data source")
-        return None
-
     if not _check_node_available():
         _WIND_STATUS["last_error"] = "Node.js not available"
         return None
 
+    # Atomic check-and-record so parallel fetches can't overspend the budget
+    with _USAGE_LOCK:
+        if not _wind_budget_allows_call():
+            _WIND_STATUS["last_error"] = "Wind daily point limit reached"
+            logger.warning("Wind daily point limit reached; using fallback data source")
+            return None
+        _record_wind_call_usage()
+
     params_json = json.dumps(params, ensure_ascii=False, separators=(",", ":"))
 
     try:
-        _record_wind_call_usage()
-        result = subprocess.run(
-            [*_WIND_CLI, "call", server_type, tool_name, params_json],
-            cwd=skill_dir,
-            env=_wind_subprocess_env(),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=timeout,
-        )
+        with _WIND_SUBPROC_SEM:
+            result = subprocess.run(
+                [*_WIND_CLI, "call", server_type, tool_name, params_json],
+                cwd=skill_dir,
+                env=_wind_subprocess_env(),
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=timeout,
+            )
     except subprocess.TimeoutExpired:
         _WIND_STATUS["last_error"] = f"Wind MCP CLI timeout after {timeout}s"
         logger.warning("Wind MCP CLI timeout (%s/%s after %ds)", server_type, tool_name, timeout)
