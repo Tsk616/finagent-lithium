@@ -538,6 +538,14 @@
 </div>
 {% endif %}
 
+<script id="report-meta-json" type="application/json">{{ {
+  "report_id": report_id or "",
+  "company_name": company_name,
+  "current_period": current_period,
+  "weighted_score": (weighted_score.get('score') if weighted_score else None),
+  "sector": sector_level2 or ""
+} | tojson }}</script>
+<script src="/static/js/local-history.js"></script>
 <script src="/static/js/report.js"></script>
 </body>
 </html>

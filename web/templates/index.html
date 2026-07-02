@@ -238,11 +238,15 @@
         {% else %}
         <div class="empty-state">当前服务启动后还没有生成报告。生成后的报告会自动保留最近 20 条，便于回看和追问。</div>
         {% endif %}
+        <div id="localHistoryBox" class="local-history-box"
+             data-server-ids='{{ history_items | map(attribute="report_id") | list | tojson }}'></div>
+        <p class="muted-copy" style="margin-top:10px;">提示：服务器历史在服务重启后会清空；每份报告会同时存入当前浏览器（上方"本地存档"条目），可随时只读回看。追问功能需要服务器仍保留该报告。</p>
       </section>
     </section>
   </main>
 </div>
 
+<script src="/static/js/local-history.js"></script>
 <script src="/static/js/workbench.js"></script>
 
 <footer class="index-footer">

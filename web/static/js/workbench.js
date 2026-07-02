@@ -375,6 +375,15 @@ function sendHistoryChat(reportId) {
   });
 }
 
+// ── Local (browser) history rendering ──
+(function() {
+  var box = document.getElementById('localHistoryBox');
+  if (!box || typeof renderLocalHistory !== 'function') return;
+  var serverIds = [];
+  try { serverIds = JSON.parse(box.getAttribute('data-server-ids')) || []; } catch (e) {}
+  renderLocalHistory('localHistoryBox', serverIds);
+})();
+
 // ── Auto-start demo analysis (arriving via /demo) ──
 function startDemoAnalyze(period) {
   startLoading();

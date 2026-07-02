@@ -2017,3 +2017,14 @@ input:focus, textarea:focus { outline: none; border-color: var(--blue-link); }
 .pred-lists { margin-top: 12px; font-size: 13px; }
 .pred-lists > b { color: var(--text-heading, #e6eaf2); }
 .pred-lists ul { margin: 6px 0 0 18px; color: var(--text-secondary); line-height: 1.7; }
+
+/* ── Local (browser) history & read-only archive view ── */
+.local-history-box { margin-top: 14px; }
+.local-history-head { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.local-history-item { display: block; margin-bottom: 8px; opacity: 0.92; }
+.local-report-note { padding: 10px 16px; margin-bottom: 16px; background: var(--yellow-bg); border: 1px solid var(--yellow-border); border-radius: var(--radius); font-size: 13px; color: var(--yellow-text); }
+.local-report-body h2, .local-report-body h3, .local-report-body h4 { color: var(--text-heading); margin: 18px 0 8px; }
+.local-report-body p { margin: 6px 0; line-height: 1.7; }
+.local-report-body ul { margin: 6px 0 6px 20px; line-height: 1.7; }
+.local-report-body hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.local-report-body .md-table { overflow-x: auto; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 12px; line-height: 1.8; }

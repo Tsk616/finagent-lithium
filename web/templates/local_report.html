@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本地报告存档 · FinAgent-Lithium</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="report-container">
+  <header class="report-header">
+    <h1 id="localTitle">本地报告存档</h1>
+    <div class="report-meta" id="localMeta">存储于当前浏览器，只读视图</div>
+    <div class="header-actions">
+      <button class="btn-download" id="localDownloadBtn" style="display:none">⬇ 下载 Markdown</button>
+    </div>
+  </header>
+
+  <div class="local-report-note">
+    📦 这份报告来自浏览器本地存档：服务器已不再保留该报告的完整分析状态，图表与追问不可用；如需完整交互版本请重新运行分析。
+  </div>
+
+  <div class="analysis-card local-report-body" id="localBody">
+    <div class="empty-state">正在读取本地存档…</div>
+  </div>
+
+  <footer class="report-footer">
+    <p style="margin-top:12px;"><a href="/" style="color:var(--blue-link);font-size:13px;">← 返回首页</a></p>
+  </footer>
+</div>
+
+<script src="/static/js/local-history.js"></script>
+<script>
+(function() {
+  var id = decodeURIComponent((location.hash || '').slice(1));
+  var body = document.getElementById('localBody');
+  var item = getLocalReports().filter(function(it) { return it.report_id === id; })[0];
+  if (!id || !item) {
+    body.innerHTML = '<div class="empty-state">未在本浏览器中找到该报告存档。可能已被清理，或来自其他设备/浏览器。</div>';
+    return;
+  }
+  document.getElementById('localTitle').textContent = item.company_name;
+  document.getElementById('localMeta').textContent =
+    (item.current_period || '报告期未注明') +
+    (item.weighted_score != null ? ' | 评分 ' + item.weighted_score : '') +
+    ' | 存档于 ' + item.generated_at + ' | 本地只读视图';
+  body.innerHTML = renderMarkdownSafe(item.markdown || '（存档中没有报告正文）');
+
+  var btn = document.getElementById('localDownloadBtn');
+  btn.style.display = '';
+  btn.addEventListener('click', function() {
+    var blob = new Blob([item.markdown || ''], { type: 'text/markdown;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = item.company_name + '_analysis.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+})();
+</script>
+</body>
+</html>

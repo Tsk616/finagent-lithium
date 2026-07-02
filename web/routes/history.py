@@ -21,6 +21,16 @@ def api_history():
     return jsonify({"items": list(REPORT_HISTORY)})
 
 
+@bp.route("/local-report")
+def local_report():
+    """Read-only viewer for reports archived in the browser's localStorage.
+
+    The page is a shell; JS reads the report id from the URL hash and renders
+    the stored markdown client-side. No server state involved.
+    """
+    return render_template("local_report.html")
+
+
 @bp.route("/report/<report_id>")
 def view_report(report_id):
     """Render a report from the in-memory recent history."""
